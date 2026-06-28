@@ -454,10 +454,12 @@ function gasPost_(action, body) {
         var namaEl  = document.getElementById('sayaNamaInput');
         var hpEl    = document.getElementById('sayaHpInput');
         var emailEl = document.getElementById('sayaEmailEditInput');
+        var alamatEl = document.getElementById('sayaAlamat');
         var badgeEl = document.getElementById('sayaProfileBlokBadge');
         if (namaEl)    namaEl.value  = data[0].nama  || '';
         if (hpEl)      hpEl.value    = data[0].noHp  || '';
         if (emailEl)   emailEl.value = data[0].email || currentUser.email || '';
+        if (alamatEl)  alamatEl.innerText = data[0].alamat || '—';
         if (badgeEl && data.length) {
           badgeEl.innerText = 'Blok ' + data.map(function(d){ return d.blok; }).join(', ');
         }
@@ -4089,6 +4091,8 @@ function gasPost_(action, body) {
     if (namaEl)  namaEl.value  = wRes.data[0].nama  || '';
     if (hpEl)    hpEl.value    = wRes.data[0].noHp  || '';
     if (emailEl) emailEl.value = wRes.data[0].email || '';
+    var alamatEl2 = document.getElementById('sayaAlamat');
+    if (alamatEl2) alamatEl2.innerText = wRes.data[0].alamat || '—';
     // Nama profil atas ikut data fresh (hindari beda dgn field NAMA)
     if (wRes.data[0].nama) {
       var _pn2 = document.getElementById('sayaProfileName');
@@ -8373,6 +8377,8 @@ function openDataWargaForm(data) {
   document.getElementById('dataWargaFormRow').value   = data ? data.rowNumber : '';
   document.getElementById('dataWargaFormBlok').value  = data ? data.blok  : '';
   document.getElementById('dataWargaFormNama').value  = data ? data.nama  : '';
+  var _alamatEl = document.getElementById('dataWargaFormAlamat');
+  if (_alamatEl) _alamatEl.value = data ? (data.alamat || '') : '';
   document.getElementById('dataWargaFormHp').value    = data ? data.noHp  : '';
   document.getElementById('dataWargaFormEmail').value = data ? data.email : '';
   var roleEl = document.getElementById('dataWargaFormRole');
@@ -8490,6 +8496,7 @@ function saveDataWargaForm() {
     rowNumber : parseInt(document.getElementById('dataWargaFormRow').value) || null,
     blok  : blok,
     nama  : nama,
+    alamat: (document.getElementById('dataWargaFormAlamat') || {}).value ? document.getElementById('dataWargaFormAlamat').value.trim() : '',
     noHp  : document.getElementById('dataWargaFormHp').value.trim(),
     email : document.getElementById('dataWargaFormEmail').value.trim().toLowerCase(),
     role  : roleEl ? roleEl.value : 'warga',
