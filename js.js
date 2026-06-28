@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycby9BUAzLgACK62SpA35zAb5hQP57CFNOjb2I2xwbb6g3rdYORIhRHcDyw-QuxOPmMQoSA/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzNYq5P-bOg_cyD-rzC0LGvvjjPf5IF0QkyDdUe3pPMQPGQSfD-r0r7tu8uyNQ72YFpTg/exec';
 
 // UX: bila backend menolak karena sesi tak valid → bersihkan sesi & arahkan ke login
 var _authExpiredHandling_ = false;
