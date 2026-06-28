@@ -459,16 +459,19 @@ function gasPost_(action, body) {
         if (namaEl)    namaEl.value  = data[0].nama  || '';
         if (hpEl)      hpEl.value    = data[0].noHp  || '';
         if (emailEl)   emailEl.value = data[0].email || currentUser.email || '';
-        if (alamatEl)  alamatEl.innerText = data[0].alamat || '—';
+        if (alamatEl)  alamatEl.value = data[0].alamat || '';
         if (badgeEl && data.length) {
           badgeEl.innerText = 'Blok ' + data.map(function(d){ return d.blok; }).join(', ');
         }
       }
 
-      if (currentUser && currentUser.wargaData && currentUser.wargaData.length) {
-        renderSayaWargaData_(currentUser.wargaData);
-      } else if (currentUser && currentUser.email) {
-        // Belum ada wargaData di session → fetch
+      // Session lama bisa belum punya field 'alamat' → anggap perlu refetch
+      var _wd = currentUser && currentUser.wargaData;
+      var _needRefetch = !_wd || !_wd.length || typeof _wd[0].alamat === 'undefined';
+      if (_wd && _wd.length) {
+        renderSayaWargaData_(_wd);
+      }
+      if (_needRefetch && currentUser && currentUser.email) {
         gasGet_('getCurrentUserDataWarga', { email: currentUser.email }).then(function(wRes) {
           if (!currentUser) return;
           if (!wRes || !wRes.success || !wRes.data || !wRes.data.length) return;
@@ -4092,7 +4095,7 @@ function gasPost_(action, body) {
     if (hpEl)    hpEl.value    = wRes.data[0].noHp  || '';
     if (emailEl) emailEl.value = wRes.data[0].email || '';
     var alamatEl2 = document.getElementById('sayaAlamat');
-    if (alamatEl2) alamatEl2.innerText = wRes.data[0].alamat || '—';
+    if (alamatEl2) alamatEl2.value = wRes.data[0].alamat || '';
     // Nama profil atas ikut data fresh (hindari beda dgn field NAMA)
     if (wRes.data[0].nama) {
       var _pn2 = document.getElementById('sayaProfileName');
@@ -4844,12 +4847,14 @@ function gasPost_(action, body) {
   function cancelSayaEdit() {
     var namaEl  = document.getElementById('sayaNamaInput');
     var hpEl    = document.getElementById('sayaHpInput');
+    var alamatEl = document.getElementById('sayaAlamat');
     var editBtn = document.getElementById('sayaEditBtn');
     var saveBtn = document.getElementById('sayaSaveBtn');
     var cancelBtn = document.getElementById('sayaCancelBtn');
     // Restore original values from data attributes
     if (namaEl) { namaEl.value = namaEl.dataset.original || namaEl.value; namaEl.readOnly = true; namaEl.style.borderBottom = ''; namaEl.style.paddingBottom = ''; }
     if (hpEl)   { hpEl.value  = hpEl.dataset.original  || hpEl.value;   hpEl.readOnly  = true; hpEl.style.borderBottom  = ''; hpEl.style.paddingBottom  = ''; }
+    if (alamatEl) { alamatEl.value = alamatEl.dataset.original || alamatEl.value; alamatEl.readOnly = true; alamatEl.style.borderBottom = ''; alamatEl.style.paddingBottom = ''; }
     if (editBtn)   editBtn.classList.remove('hidden');
     if (saveBtn)   saveBtn.classList.add('hidden');
     if (cancelBtn) cancelBtn.classList.add('hidden');
@@ -4858,6 +4863,7 @@ function gasPost_(action, body) {
   function enableSayaEdit() {
     var namaEl  = document.getElementById('sayaNamaInput');
     var hpEl    = document.getElementById('sayaHpInput');
+    var alamatEl = document.getElementById('sayaAlamat');
     var editBtn = document.getElementById('sayaEditBtn');
     var saveBtn = document.getElementById('sayaSaveBtn');
     var cancelBtn = document.getElementById('sayaCancelBtn');
@@ -4865,9 +4871,10 @@ function gasPost_(action, body) {
     // Save originals for cancel
     if (namaEl) namaEl.dataset.original = namaEl.value;
     if (hpEl)   hpEl.dataset.original   = hpEl.value;
+    if (alamatEl) alamatEl.dataset.original = alamatEl.value;
 
-    // Hanya nama dan HP yang editable
-    [namaEl, hpEl].forEach(function(el) {
+    // Nama, HP, dan Alamat editable (Blok tetap terkunci)
+    [namaEl, hpEl, alamatEl].forEach(function(el) {
       if (!el) return;
       el.readOnly = false;
       el.classList.remove('text-gray-900');
@@ -4888,13 +4895,18 @@ function gasPost_(action, body) {
   function saveSayaData() {
     const namaEl  = document.getElementById('sayaNamaInput');
     const hpEl    = document.getElementById('sayaHpInput');
+    const alamatEl = document.getElementById('sayaAlamat');
     const emailEl = document.getElementById('sayaEmailEditInput');
     const btn     = document.getElementById('sayaSaveBtn');
 
+    var _wdBlok = (currentUser && currentUser.wargaData && currentUser.wargaData.length)
+      ? (currentUser.wargaData[0].blok || '') : '';
     const payload = {
       email: currentUser ? currentUser.email : '',
+      blok: _wdBlok,
       nama: namaEl ? namaEl.value.trim() : '',
-      noHp: hpEl ? hpEl.value.trim() : ''
+      noHp: hpEl ? hpEl.value.trim() : '',
+      alamat: alamatEl ? alamatEl.value.trim() : ''
     };
 
     // ===== LOADING STATE =====
@@ -4935,10 +4947,11 @@ function gasPost_(action, body) {
         if (currentUser && currentUser.wargaData && currentUser.wargaData.length) {
           if (payload.nama) currentUser.wargaData[0].nama = payload.nama;
           if (payload.noHp) currentUser.wargaData[0].noHp = payload.noHp;
+          currentUser.wargaData[0].alamat = payload.alamat;
         }
         try { if (typeof saveSession === 'function') saveSession(currentUser); } catch(_) {}
         setTimeout(function() {
-          [namaEl, hpEl].forEach(function(el) {
+          [namaEl, hpEl, alamatEl].forEach(function(el) {
             if (!el) return;
             el.readOnly = true;
             el.style.borderBottom = '';
