@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pwp-portal",
+  "name": "pwp-griyaloka-rt03",
   "compatibility_date": "2026-04-03",
   "observability": {
     "enabled": true
@@ -11,8 +11,5 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "workers_dev": false,
-  "routes": [
-    { "pattern": "pwp.serabut.id", "custom_domain": true }
-  ]
+  "workers_dev": true
 }
