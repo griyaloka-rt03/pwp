@@ -17006,3 +17006,22 @@ function reconConfirmUnsubByIdx_(i, btn) {
     if (typeof showToast === 'function') showToast('Error koneksi', 'error');
   });
 }
+
+/* ===== HEADER AVATAR MENU (Akun Saya / Keluar) ===== */
+function toggleHeaderMenu(e) {
+  if (e) e.stopPropagation();
+  if (!window.currentUser) return; // hanya saat login
+  var m = document.getElementById('headerAvatarMenu');
+  if (m) m.classList.toggle('hidden');
+}
+function closeHeaderMenu() {
+  var m = document.getElementById('headerAvatarMenu');
+  if (m) m.classList.add('hidden');
+}
+document.addEventListener('click', function (e) {
+  var m = document.getElementById('headerAvatarMenu');
+  var a = document.getElementById('headerAvatar');
+  if (!m || m.classList.contains('hidden')) return;
+  if (m.contains(e.target) || (a && a.contains(e.target))) return;
+  m.classList.add('hidden');
+});
