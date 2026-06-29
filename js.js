@@ -507,6 +507,9 @@ function gasPost_(action, body) {
         });
       }
 
+      // Cek menu Kelola Penyewa (Pemilik) — juga saat buka Akun via nav, bukan hanya pasca-login
+      if (typeof _checkKelolaPenyewaMenu_ === 'function') _checkKelolaPenyewaMenu_();
+
       // ===== FORCE RESET EDIT MODE (ANTI NYANGKUT) =====
       const namaInput = document.getElementById('sayaNamaInput');
       const hpInput = document.getElementById('sayaHpInput');
@@ -5464,7 +5467,8 @@ function gasPost_(action, body) {
           (itemBlok2 && userOwnBlocks.includes(itemBlok2))
         );
 
-        return emailMatch && blokMatch;
+        // Blok = kunci paling andal milik warga (identitas bisa No HP, email bisa kosong/'-')
+        return blokMatch || emailMatch;
       });
 
       // Search
