@@ -119,6 +119,12 @@ function gasPost_(action, body) {
           clearSession();
           return null;
         }
+        // Session pra-refactor identitas (email kosong) → paksa login ulang
+        // agar dapat identitas kanonik (No HP) & token sesi valid.
+        if (!sessionData.user || !sessionData.user.email) {
+          clearSession();
+          return null;
+        }
         // Refresh timestamp agar tidak expire
         sessionData.timestamp = now;
         var raw = JSON.stringify(sessionData);
@@ -471,7 +477,7 @@ function gasPost_(action, body) {
 
       // Session lama bisa belum punya field 'alamat' → anggap perlu refetch
       var _wd = currentUser && currentUser.wargaData;
-      var _needRefetch = !_wd || !_wd.length || typeof _wd[0].alamat === 'undefined';
+      var _needRefetch = !_wd || !_wd.length || typeof _wd[0].alamat === 'undefined' || typeof _wd[0].jmlMobil === 'undefined';
       if (_wd && _wd.length) {
         renderSayaWargaData_(_wd);
       }
