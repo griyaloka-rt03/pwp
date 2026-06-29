@@ -16305,7 +16305,7 @@ function _tarifFromSettings_(s) {
   for (var i = 1; i <= 3; i++) {
     var label = String((s && s['tarif' + i + 'Label']) || '').trim();
     var nominal = parseInt(String((s && s['tarif' + i + 'Nominal']) || '').replace(/[^0-9]/g, ''), 10) || 0;
-    if (nominal > 0) a.push({ label: label || ('Tarif ' + i), nominal: nominal });
+    if (label && nominal > 0) a.push({ label: label, nominal: nominal }); // tarif tampil hanya jika label terisi
   }
   return a;
 }
