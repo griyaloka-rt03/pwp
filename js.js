@@ -460,6 +460,10 @@ function gasPost_(action, body) {
         if (hpEl)      hpEl.value    = data[0].noHp  || '';
         if (emailEl)   emailEl.value = data[0].email || currentUser.email || '';
         if (alamatEl)  alamatEl.value = data[0].alamat || '';
+        var mobilEl = document.getElementById('sayaJmlMobil');
+        var motorEl = document.getElementById('sayaJmlMotor');
+        if (mobilEl) mobilEl.value = data[0].jmlMobil || 0;
+        if (motorEl) motorEl.value = data[0].jmlMotor || 0;
         if (badgeEl && data.length) {
           badgeEl.innerText = 'Blok ' + data.map(function(d){ return d.blok; }).join(', ');
         }
@@ -4096,6 +4100,10 @@ function gasPost_(action, body) {
     if (emailEl) emailEl.value = wRes.data[0].email || '';
     var alamatEl2 = document.getElementById('sayaAlamat');
     if (alamatEl2) alamatEl2.value = wRes.data[0].alamat || '';
+    var mobilEl2 = document.getElementById('sayaJmlMobil');
+    var motorEl2 = document.getElementById('sayaJmlMotor');
+    if (mobilEl2) mobilEl2.value = wRes.data[0].jmlMobil || 0;
+    if (motorEl2) motorEl2.value = wRes.data[0].jmlMotor || 0;
     // Nama profil atas ikut data fresh (hindari beda dgn field NAMA)
     if (wRes.data[0].nama) {
       var _pn2 = document.getElementById('sayaProfileName');
@@ -4855,6 +4863,7 @@ function gasPost_(action, body) {
     if (namaEl) { namaEl.value = namaEl.dataset.original || namaEl.value; namaEl.readOnly = true; namaEl.style.borderBottom = ''; namaEl.style.paddingBottom = ''; }
     if (hpEl)   { hpEl.value  = hpEl.dataset.original  || hpEl.value;   hpEl.readOnly  = true; hpEl.style.borderBottom  = ''; hpEl.style.paddingBottom  = ''; }
     if (alamatEl) { alamatEl.value = alamatEl.dataset.original || alamatEl.value; alamatEl.readOnly = true; alamatEl.style.borderBottom = ''; alamatEl.style.paddingBottom = ''; }
+    ['sayaJmlMobil','sayaJmlMotor'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.value=el.dataset.original||el.value; el.readOnly=true; el.style.borderBottom=''; el.style.paddingBottom=''; } });
     if (editBtn)   editBtn.classList.remove('hidden');
     if (saveBtn)   saveBtn.classList.add('hidden');
     if (cancelBtn) cancelBtn.classList.add('hidden');
@@ -4864,6 +4873,8 @@ function gasPost_(action, body) {
     var namaEl  = document.getElementById('sayaNamaInput');
     var hpEl    = document.getElementById('sayaHpInput');
     var alamatEl = document.getElementById('sayaAlamat');
+    var mobilEl = document.getElementById('sayaJmlMobil');
+    var motorEl = document.getElementById('sayaJmlMotor');
     var editBtn = document.getElementById('sayaEditBtn');
     var saveBtn = document.getElementById('sayaSaveBtn');
     var cancelBtn = document.getElementById('sayaCancelBtn');
@@ -4872,9 +4883,11 @@ function gasPost_(action, body) {
     if (namaEl) namaEl.dataset.original = namaEl.value;
     if (hpEl)   hpEl.dataset.original   = hpEl.value;
     if (alamatEl) alamatEl.dataset.original = alamatEl.value;
+    if (mobilEl) mobilEl.dataset.original = mobilEl.value;
+    if (motorEl) motorEl.dataset.original = motorEl.value;
 
-    // Nama, HP, dan Alamat editable (Blok tetap terkunci)
-    [namaEl, hpEl, alamatEl].forEach(function(el) {
+    // Nama, HP, Alamat, Kendaraan editable (Blok tetap terkunci)
+    [namaEl, hpEl, alamatEl, mobilEl, motorEl].forEach(function(el) {
       if (!el) return;
       el.readOnly = false;
       el.classList.remove('text-gray-900');
@@ -4906,7 +4919,9 @@ function gasPost_(action, body) {
       blok: _wdBlok,
       nama: namaEl ? namaEl.value.trim() : '',
       noHp: hpEl ? hpEl.value.trim() : '',
-      alamat: alamatEl ? alamatEl.value.trim() : ''
+      alamat: alamatEl ? alamatEl.value.trim() : '',
+      jmlMobil: parseInt((document.getElementById('sayaJmlMobil')||{}).value, 10) || 0,
+      jmlMotor: parseInt((document.getElementById('sayaJmlMotor')||{}).value, 10) || 0
     };
 
     // ===== LOADING STATE =====
@@ -4948,10 +4963,12 @@ function gasPost_(action, body) {
           if (payload.nama) currentUser.wargaData[0].nama = payload.nama;
           if (payload.noHp) currentUser.wargaData[0].noHp = payload.noHp;
           currentUser.wargaData[0].alamat = payload.alamat;
+          currentUser.wargaData[0].jmlMobil = payload.jmlMobil;
+          currentUser.wargaData[0].jmlMotor = payload.jmlMotor;
         }
         try { if (typeof saveSession === 'function') saveSession(currentUser); } catch(_) {}
         setTimeout(function() {
-          [namaEl, hpEl, alamatEl].forEach(function(el) {
+          [namaEl, hpEl, alamatEl, document.getElementById('sayaJmlMobil'), document.getElementById('sayaJmlMotor')].forEach(function(el) {
             if (!el) return;
             el.readOnly = true;
             el.style.borderBottom = '';
@@ -8392,6 +8409,10 @@ function openDataWargaForm(data) {
   document.getElementById('dataWargaFormNama').value  = data ? data.nama  : '';
   var _alamatEl = document.getElementById('dataWargaFormAlamat');
   if (_alamatEl) _alamatEl.value = data ? (data.alamat || '') : '';
+  var _mobilEl = document.getElementById('dataWargaFormMobil');
+  if (_mobilEl) _mobilEl.value = data ? (data.jmlMobil || 0) : '';
+  var _motorEl = document.getElementById('dataWargaFormMotor');
+  if (_motorEl) _motorEl.value = data ? (data.jmlMotor || 0) : '';
   document.getElementById('dataWargaFormHp').value    = data ? data.noHp  : '';
   document.getElementById('dataWargaFormEmail').value = data ? data.email : '';
   var roleEl = document.getElementById('dataWargaFormRole');
@@ -8510,6 +8531,8 @@ function saveDataWargaForm() {
     blok  : blok,
     nama  : nama,
     alamat: (document.getElementById('dataWargaFormAlamat') || {}).value ? document.getElementById('dataWargaFormAlamat').value.trim() : '',
+    jmlMobil: parseInt((document.getElementById('dataWargaFormMobil')||{}).value, 10) || 0,
+    jmlMotor: parseInt((document.getElementById('dataWargaFormMotor')||{}).value, 10) || 0,
     noHp  : document.getElementById('dataWargaFormHp').value.trim(),
     email : document.getElementById('dataWargaFormEmail').value.trim().toLowerCase(),
     role  : roleEl ? roleEl.value : 'warga',
