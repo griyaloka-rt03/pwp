@@ -16337,7 +16337,7 @@ function renderTarifCards_(opts) {
   var html = tarifs.map(function (t, idx) {
     var match = loggedIn && rate != null && _rateMatchesTarif_(rate, t.nominal, opts.res);
     var last = idx === tarifs.length - 1;
-    var nom = loggedIn ? ('Rp' + Number(t.nominal).toLocaleString('id-ID')) : 'Rp&nbsp;<span style="letter-spacing:2px">••••••</span>';
+    var nom = 'Rp' + Number(t.nominal).toLocaleString('id-ID'); // ponytail: tarif IPL publik, tak perlu di-mask
     var style = 'padding:12px 16px;transition:all .3s;'
       + 'border-top:3px solid ' + (match ? '#2563eb' : 'transparent') + ';'
       + (last ? '' : ('border-right:1px solid ' + (match ? '#bfdbfe' : '#f3f4f6') + ';'))
