@@ -454,7 +454,7 @@ function gasPost_(action, body) {
       var nameEl  = document.getElementById('sayaProfileName');
       var profEmail = document.getElementById('sayaProfileEmail');
       if (nameEl)    nameEl.innerText  = currentUser.fullName || '';
-      if (profEmail) profEmail.innerText = currentUser.email || '';
+      if (profEmail) profEmail.innerText = _emailOrBlank_(currentUser.email);
       _renderProfileAvatar_(currentUser.fullName || '');
       _updateDesktopSidebarProfile_();
 
@@ -3842,7 +3842,7 @@ function gasPost_(action, body) {
       var emailStepEl = document.getElementById('sayaStepEmail');
       if (emailStepEl) { emailStepEl.classList.add('hidden'); emailStepEl.style.display = ''; emailStepEl.style.height = ''; }
       document.getElementById('sayaProfileName').innerText = res.user.fullName || 'User';
-      document.getElementById('sayaProfileEmail').innerText = res.user.email;
+      document.getElementById('sayaProfileEmail').innerText = _emailOrBlank_(res.user.email);
       _renderProfileAvatar_(res.user.fullName || 'User');
       var loggedInView = document.getElementById('sayaLoggedInView');
       if (loggedInView) {
@@ -4412,7 +4412,7 @@ function gasPost_(action, body) {
     var profName = document.getElementById('sayaProfileName');
     var profEmail = document.getElementById('sayaProfileEmail');
     if (profName) profName.innerText = user.fullName || 'User';
-    if (profEmail) profEmail.innerText = user.email;
+    if (profEmail) profEmail.innerText = _emailOrBlank_(user.email);
     _renderProfileAvatar_(user.fullName || 'User');
     _updateDesktopSidebarProfile_();
     document.getElementById('sayaLoggedInView').classList.remove('hidden');
@@ -17038,3 +17038,6 @@ document.addEventListener('click', function (e) {
   if (m.contains(e.target) || (a && a.contains(e.target))) return;
   m.classList.add('hidden');
 });
+
+/* Tampilkan email hanya bila email asli (ada '@'); identitas kanonik No HP → kosong */
+function _emailOrBlank_(e) { e = String(e || ''); return e.indexOf('@') !== -1 ? e : ''; }
