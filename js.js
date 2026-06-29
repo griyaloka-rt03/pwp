@@ -16342,7 +16342,7 @@ function renderTarifCards_(opts) {
       + 'border-top:3px solid ' + (match ? '#2563eb' : 'transparent') + ';'
       + (last ? '' : ('border-right:1px solid ' + (match ? '#bfdbfe' : '#f3f4f6') + ';'))
       + 'background:' + (match ? '#eff6ff' : (loggedIn ? '#fafafa' : '#fff')) + ';'
-      + 'opacity:' + ((loggedIn && !match) ? '0.55' : '1') + ';';
+      + 'opacity:1;';
     return '<div style="' + style + '">'
       + '<p class="text-[9px] uppercase tracking-widest font-semibold" style="color:' + (match ? '#1d4ed8' : '#9ca3af') + '">' + _escTarif_(t.label) + (match ? badge : '') + '</p>'
       + '<p class="text-sm font-black mt-0.5" style="color:' + (match ? '#1d4ed8' : '#111827') + '">' + nom + '</p>'
