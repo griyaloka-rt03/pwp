@@ -207,7 +207,7 @@ function gasPost_(action, body) {
       }, 3600);
     })();
 
-    const VALID_BLOK_LIST = [
+    let VALID_BLOK_LIST = [
     "A1","A2","A3","A5",
     "B1","B2","B3","B5","B6","B7","B8","B9","B10","B11","B12","B12A",
     "C1","C2","C3","C5","C6","C7","C8","C9","C10","C11","C12","C12A","C15","C16","C17","C18","C19",
@@ -224,6 +224,19 @@ function gasPost_(action, body) {
     "I1","I2","I3","I5","I6","I7","I8","I9","I10","I11","I12",
     "I14","I15","I16","I17","I18"
     ];
+
+    // Ganti whitelist dgn blok asli dari sheet (Data Warga) — bukan hardcode serabut
+    function loadValidBloks_() {
+      try {
+        gasGet_('getAllBloks').then(function(res){
+          if (res && res.ok && res.bloks && res.bloks.length) {
+            VALID_BLOK_LIST = res.bloks;
+            if (typeof updateSubmitButtonState === 'function') updateSubmitButtonState();
+          }
+        }).catch(function(){});
+      } catch(e) {}
+    }
+    loadValidBloks_();
 
     function getBlokSuggestions(input) {
 
@@ -695,8 +708,8 @@ function gasPost_(action, body) {
         .map(v => v.trim().toUpperCase())
         .filter(Boolean);
 
-      // Format: 1 huruf + 1-3 angka
-      const regex = /^[A-Z][0-9]{1,3}[A-Z]?$/;
+      // Format: 1 huruf + 1-3 angka, opsional "-angka" (mis. C4-3) + opsional huruf
+      const regex = /^[A-Z][0-9]{1,3}(-[0-9]{1,3})?[A-Z]?$/;
 
       return parts.every(part => regex.test(part));
     }
