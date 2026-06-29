@@ -119,9 +119,11 @@ function gasPost_(action, body) {
           clearSession();
           return null;
         }
-        // Session pra-refactor identitas (email kosong) → paksa login ulang
-        // agar dapat identitas kanonik (No HP) & token sesi valid.
-        if (!sessionData.user || !sessionData.user.email) {
+        // Session lama (email kosong / placeholder '-') → paksa login ulang
+        // agar dapat identitas kanonik (email valid atau No HP) & token sesi valid.
+        var _em = sessionData.user && String(sessionData.user.email || '').trim();
+        var _validId = _em && (_em.indexOf('@') !== -1 || /^\d{8,}$/.test(_em));
+        if (!_validId) {
           clearSession();
           return null;
         }
