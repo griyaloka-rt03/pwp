@@ -466,7 +466,7 @@ function gasPost_(action, body) {
         var badgeEl = document.getElementById('sayaProfileBlokBadge');
         if (namaEl)    namaEl.value  = data[0].nama  || '';
         if (hpEl)      hpEl.value    = data[0].noHp  || '';
-        if (emailEl)   emailEl.value = data[0].email || currentUser.email || '';
+        if (emailEl)   emailEl.value = data[0].email || ''; // jgn fallback ke currentUser.email (kanonik bisa = No HP)
         if (alamatEl)  alamatEl.value = data[0].alamat || '';
         var mobilEl = document.getElementById('sayaJmlMobil');
         var motorEl = document.getElementById('sayaJmlMotor');
@@ -479,7 +479,8 @@ function gasPost_(action, body) {
 
       // Session lama bisa belum punya field 'alamat' → anggap perlu refetch
       var _wd = currentUser && currentUser.wargaData;
-      var _needRefetch = !_wd || !_wd.length || typeof _wd[0].alamat === 'undefined' || typeof _wd[0].jmlMobil === 'undefined';
+      var _needRefetch = !_wd || !_wd.length || typeof _wd[0].alamat === 'undefined' || typeof _wd[0].jmlMobil === 'undefined'
+        || /^\d{8,}$/.test(String((_wd[0] || {}).email || '')); // email ke-cache sbg No HP (anomali) → refresh
       if (_wd && _wd.length) {
         renderSayaWargaData_(_wd);
       }
