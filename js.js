@@ -6450,7 +6450,7 @@ function loadHomeTunggakan() {
   if (ctaEl) ctaEl.remove();
 
   nomEl.innerText = 'Memuat...';
-  gasGet_('getWargaTunggakan', { email: currentUser.email })
+  gasGet_('getWargaTunggakan', { email: currentUser.email, bloks: (currentUser.wargaData || []).map(function(d){return d.blok;}).filter(Boolean).join(',') })
     .then(function(res) {
       console.log('[tunggakan res]', JSON.stringify(res));
       homeDataCache.tunggakan = res;
