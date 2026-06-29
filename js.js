@@ -4299,10 +4299,10 @@ function gasPost_(action, body) {
     var errorEl = document.getElementById('formPenyewaError');
     errorEl.classList.add('hidden');
 
-    if (!nama || !wa || !email) {
-      errorEl.innerText = 'Semua field wajib diisi'; errorEl.classList.remove('hidden'); return;
+    if (!nama || !wa) {
+      errorEl.innerText = 'Nama dan No. WhatsApp wajib diisi'; errorEl.classList.remove('hidden'); return;
     }
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
       errorEl.innerText = 'Format email tidak valid'; errorEl.classList.remove('hidden'); return;
     }
     if (!/^0\d{8,13}$/.test(wa)) {
@@ -16421,7 +16421,7 @@ function loadPerumahanName() {
       applyPerumahanName(nm);
       applyOrgRekening_(res.settings);
       window.PWP_TARIFS = _tarifFromSettings_(res.settings);
-      renderTarifCards_({ loggedIn: !!window.currentUser }); // login via blok/HP bisa tanpa email
+      renderTarifCards_({ loggedIn: !!(typeof currentUser !== 'undefined' && currentUser) }); // login via blok/HP bisa tanpa email
       renderHunianCards_();
     }
   }).catch(function() { /* offline → pakai cache */ });
@@ -17023,7 +17023,7 @@ function reconConfirmUnsubByIdx_(i, btn) {
 /* ===== HEADER AVATAR MENU (Akun Saya / Keluar) ===== */
 function toggleHeaderMenu(e) {
   if (e) e.stopPropagation();
-  if (!window.currentUser) return; // hanya saat login
+  if (typeof currentUser === 'undefined' || !currentUser) return; // hanya saat login
   var m = document.getElementById('headerAvatarMenu');
   if (m) m.classList.toggle('hidden');
 }
