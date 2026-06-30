@@ -14038,12 +14038,11 @@ function openWargaBaruCRUD() {
   var modal = document.getElementById('wargaBaruCRUDModal');
   if (!modal) return;
   modal.classList.remove('hidden');
-  // Use cache if available — only fetch on first open or after cache bust
+  // Render cache dulu (instan, anti-flicker) LALU selalu refetch agar realtime
   if (_adminWargaBaruCache_ && _adminWargaBaruCache_.data) {
     _renderWargaBaruCRUDFromCache_(_adminWargaBaruCache_.data);
-  } else {
-    _loadWargaBaruCRUDList_();
   }
+  _loadWargaBaruCRUDList_();
 }
 
 function closeWargaBaruCRUD() {
