@@ -3315,11 +3315,15 @@ function gasPost_(action, body) {
     function mark(arr, status) {
       (arr || []).forEach(function(it) {
         var yr = String(it.tahun || '').trim();
-        var mi = monthIdx(it.bulan);
-        if (!yr || mi < 0) return;
-        if (!byYear[yr]) byYear[yr] = {};
-        // confirmed menang atas pending
-        if (byYear[yr][mi] !== 'confirmed') byYear[yr][mi] = status;
+        if (!yr) return;
+        // bulan bisa multi (mis. "Feb, Mar") → tandai tiap bulan
+        String(it.bulan || '').split(',').forEach(function(b) {
+          var mi = monthIdx(b);
+          if (mi < 0) return;
+          if (!byYear[yr]) byYear[yr] = {};
+          // confirmed menang atas pending
+          if (byYear[yr][mi] !== 'confirmed') byYear[yr][mi] = status;
+        });
       });
     }
     mark(pendingArr, 'pending');
