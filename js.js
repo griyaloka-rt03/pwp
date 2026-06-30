@@ -6497,7 +6497,7 @@ function loadHomeTunggakan() {
   if (ctaEl) ctaEl.remove();
 
   nomEl.innerText = 'Memuat...';
-  gasGet_('getWargaTunggakan', { email: currentUser.email, bloks: (currentUser.wargaData || []).map(function(d){return d.blok;}).filter(Boolean).join(',') })
+  return gasGet_('getWargaTunggakan', { email: currentUser.email, bloks: (currentUser.wargaData || []).map(function(d){return d.blok;}).filter(Boolean).join(',') })
     .then(function(res) {
       console.log('[tunggakan res]', JSON.stringify(res));
       homeDataCache.tunggakan = res;
@@ -6805,8 +6805,7 @@ function loadHomeTunggakan() {
     });
 }
 
-function openTunggakanDetail() {
-  var cache = homeDataCache.tunggakan;
+function openTunggakanDetail(_isRefresh) {
   var modal = document.getElementById('tunggakanModal');
   if (!modal) return;
 
@@ -6815,12 +6814,20 @@ function openTunggakanDetail() {
     return;
   }
 
+  // Realtime: ambil tunggakan terbaru lalu render ulang sekali (status bisa berubah setelah admin confirm)
+  if (!_isRefresh) {
+    var _p = loadHomeTunggakan();
+    if (_p && _p.then) _p.then(function(){ openTunggakanDetail(true); });
+  }
+
+  var cache = homeDataCache.tunggakan;
+
   var blokEl  = document.getElementById('tunggakanModalBlok');
   var listEl  = document.getElementById('tunggakanModalList');
   var totalEl = document.getElementById('tunggakanModalTotal');
 
   if (!cache || !cache.ok) {
-    showToast('Data belum tersedia, coba refresh', 'warning');
+    if (_isRefresh) showToast('Data belum tersedia, coba refresh', 'warning'); // tunggu refresh dulu
     return;
   }
 
