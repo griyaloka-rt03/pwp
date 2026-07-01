@@ -10097,9 +10097,9 @@ function _kasRpShort_(n){ n=Number(n||0); var sg=n<0?'-':''; var a=Math.abs(n); 
 
 // Loader getKasReport bersama — cegah request ganda saat saldo & aktivitas terbaru dimuat bersamaan
 var _kasReportLoadingPromise_ = null;
-function _loadKasReportShared_(){
+function _loadKasReportShared_(force){
   var anyYear = Object.keys(_kasReportCache)[0];
-  if(anyYear) return Promise.resolve(_kasReportCache[anyYear]);
+  if(anyYear && !force) return Promise.resolve(_kasReportCache[anyYear]);
   if(_kasReportLoadingPromise_) return _kasReportLoadingPromise_;
   _kasReportLoadingPromise_ = gasGet_('getKasReport', {}).then(function(res){
     _kasReportLoadingPromise_ = null;
@@ -10139,14 +10139,18 @@ function _renderKasTransparansi_(){
   if(!list) return;
 
   var anyYear = Object.keys(_kasReportCache)[0];
-  if(anyYear){ _renderAktivitasTerbaru_(_kasReportCache[anyYear]); return; }
+  if(anyYear){ _renderAktivitasTerbaru_(_kasReportCache[anyYear]); } // render cache instan (anti-flicker)
+  else list.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Memuat...</p>';
 
-  list.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Memuat...</p>';
-
-  _loadKasReportShared_().then(function(res){
-    if(res && res.ok) _renderAktivitasTerbaru_(res);
-    else list.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat data</p>';
-  }).catch(function(){ list.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat data</p>'; });
+  // Selalu refetch fresh → realtime (mis. setelah admin confirm pembayaran)
+  _loadKasReportShared_(true).then(function(res){
+    if(res && res.ok){
+      _renderAktivitasTerbaru_(res);
+      if(typeof _renderSaldoKasCard_ === 'function') _renderSaldoKasCard_();
+    } else if(!anyYear){
+      list.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat data</p>';
+    }
+  }).catch(function(){ if(!anyYear) list.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat data</p>'; });
 }
 
 // Donut "Transparansi Kas" — dipakai di dalam modal Laporan Kas
@@ -11370,8 +11374,8 @@ var _kasIPLData = {
   },
   '2026': {
     type: 'folder',
-    url: 'https://drive.google.com/embeddedfolderview?id=1nN2YFGGQZx3lF6SbGlr_eq_LsaLS0BYU#list',
-    fallback: 'https://drive.google.com/drive/folders/1nN2YFGGQZx3lF6SbGlr_eq_LsaLS0BYU'
+    url: 'https://drive.google.com/embeddedfolderview?id=1ggeX-coM41kb0dFBlmXOYRUNV5ewduxB#list',
+    fallback: 'https://drive.google.com/drive/folders/1ggeX-coM41kb0dFBlmXOYRUNV5ewduxB'
   }
 };
 
