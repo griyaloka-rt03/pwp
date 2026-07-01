@@ -1116,7 +1116,7 @@ function gasPost_(action, body) {
         clearBlokError();
         blokInput.value = blokInput.value
           .toUpperCase()
-          .replace(/[^A-Z0-9,]/g, '');
+          .replace(/[^A-Z0-9,-]/g, ''); // izinkan '-' (format Griya C4-3)
 
         isLookupLocked = false;
         multiDecisionMode = null;
@@ -6472,6 +6472,14 @@ function loadHomeTunggakan() {
     badgeEl.innerText = '—';
     badgeEl.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-white/20 text-white';
 
+    // Reset warna kartu ke biru default (hapus warna merah tunggakan sisa sesi lalu)
+    var _cardLogout = document.getElementById('homeTunggakanCard');
+    if (_cardLogout) _cardLogout.style.background = '#1d4ed8';
+    var _dueBadgeLogout = document.getElementById('dueDateBadge');
+    if (_dueBadgeLogout) _dueBadgeLogout.remove();
+    var _labelLogout = document.querySelector('#homeTunggakanCard .text-blue-200');
+    if (_labelLogout) _labelLogout.innerText = 'Total Tunggakan';
+
     var monthEl = document.getElementById('homeIplMonth');
     if (monthEl) monthEl.innerText = 's.d. bulan ini';
 
@@ -7468,8 +7476,7 @@ function togglePedomanModal() {
     // Belum login → konten terkunci, langsung arahkan ke login (jangan tampilkan list)
     if (!currentUser) {
       overlay.classList.add('hidden');
-      if (typeof showToast === 'function') showToast('Login dulu untuk membuka Pedoman', 'info');
-      if (typeof openMePage === 'function') openMePage();
+      if (typeof openLoginRequiredModal === 'function') openLoginRequiredModal('Login dulu untuk membuka Pedoman.');
       return;
     }
     if (navigator.vibrate) navigator.vibrate(40);
@@ -12763,7 +12770,7 @@ function switchLaporTab(tab) {
 // ── FORM ──────────────────────────────────────────────
 
 function openLaporForm() {
-  if (!currentUser) { openPageSaya(); return; }
+  if (!currentUser) { openLoginRequiredModal('Login dulu untuk membuat laporan.'); return; }
   var sheet = document.getElementById('laporFormSheet');
   var card  = document.getElementById('laporFormCard');
   if (!sheet || !card) return;
@@ -12944,7 +12951,7 @@ var _suratCache_ = { mine: null, all: null };
 // ── FORM PENGAJUAN ───────────────────────────────────────
 
 function openSuratPengantarModal() {
-  if (!currentUser) { openPageSaya(); return; }
+  if (!currentUser) { openLoginRequiredModal('Login dulu untuk membuat surat pengantar.'); return; }
   var sheet = document.getElementById('suratFormSheet');
   var card  = document.getElementById('suratFormCard');
   if (!sheet || !card) return;
@@ -13051,7 +13058,7 @@ function submitSuratPengantar() {
 // ── RIWAYAT (LIST) ────────────────────────────────────────
 
 function openSuratPengantarPage() {
-  if (!currentUser) { openPageSaya(); return; }
+  if (!currentUser) { openLoginRequiredModal('Login dulu untuk membuat surat pengantar.'); return; }
   switchPage('suratPengantarPage');
   _renderSuratPengantarPage_();
 }
@@ -13403,7 +13410,7 @@ var _votingCache_ = { list: null };
 var _votingData_  = [];
 
 function openVotingPage() {
-  if (!currentUser) { openPageSaya(); return; }
+  if (!currentUser) { openLoginRequiredModal('Login dulu untuk ikut voting.'); return; }
   switchPage('votingPage');
   _renderVotingPage_();
 }
