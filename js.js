@@ -10192,35 +10192,8 @@ function _kasTransparansiHtml_(res){
   '</div>';
 }
 
-// Daftar "Info Kas IPL" (laporan per tahun) — dipakai di bagian bawah modal Laporan Kas
+// Daftar "Info Kas IPL" — dinamis mengikuti isi folder Drive Kas IPL (subfolder = item)
 function _kasInfoIplListHtml_(){
-  var years = [
-    { y:'2026', label:'Laporan per bulan', badge:'Terbaru', bg:'#EFF6FF', stroke:'#2563EB' },
-    { y:'2025', label:'Laporan tahunan', badge:null, bg:'#eff6ff', stroke:'#2563eb' },
-    { y:'2024', label:'Laporan tahunan', badge:null, bg:'#FFF7ED', stroke:'#EA580C' },
-    { y:'2023', label:'Laporan tahunan', badge:null, bg:'#F5F3FF', stroke:'#7C3AED' }
-  ];
-  var rows = years.map(function(item){
-    var badge = item.badge
-      ? '<span class="text-[10px] font-semibold text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full">'+item.badge+'</span>'
-      : '';
-    return '<button onclick="openKasIPL(\''+item.y+'\')" class="w-full px-3 py-3 flex items-center gap-3 active:bg-gray-50 transition text-left">'+
-      '<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:'+item.bg+';">'+
-        '<svg class="w-4 h-4" fill="none" stroke="'+item.stroke+'" stroke-width="1.8" viewBox="0 0 24 24">'+
-          '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>'+
-          '<path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>'+
-        '</svg>'+
-      '</div>'+
-      '<div class="flex-1 min-w-0">'+
-        '<p class="text-sm font-semibold text-gray-900">Kas IPL '+item.y+'</p>'+
-        '<p class="text-xs text-gray-400 mt-0.5">'+item.label+'</p>'+
-      '</div>'+
-      '<div class="flex items-center gap-1.5 flex-shrink-0">'+badge+
-        '<svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>'+
-      '</div>'+
-    '</button>';
-  }).join('');
-
   return '<div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">'+
     '<div class="px-3 pt-3 flex items-center justify-between">'+
       '<p class="text-xs font-bold text-gray-500 uppercase tracking-wide">Info Kas IPL</p>'+
@@ -10229,8 +10202,63 @@ function _kasInfoIplListHtml_(){
         '<span class="text-[11px] text-blue-600 font-semibold">Publik</span>'+
       '</div>'+
     '</div>'+
-    '<div class="divide-y divide-gray-50 mt-1">'+rows+'</div>'+
+    '<div id="kasInfoIplList" class="divide-y divide-gray-50 mt-1">'+
+      '<p class="text-sm text-gray-400 text-center py-6">Memuat...</p>'+
+    '</div>'+
   '</div>';
+}
+
+// Muat isi folder Kas IPL (subfolder + file) → render item. Kosong = kosong.
+function _loadKasInfoIplList_(){
+  var box = document.getElementById('kasInfoIplList');
+  if(!box) return;
+  gasGet_('getKasIPLContents', { folderId: '' }).then(function(res){
+    var box2 = document.getElementById('kasInfoIplList');
+    if(!box2) return;
+    if(!res || !res.ok){ box2.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat</p>'; return; }
+    var folders = res.folders || [];
+    var files   = res.files || [];
+    if(!folders.length && !files.length){
+      box2.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Belum ada laporan kas.</p>';
+      return;
+    }
+    var icon = '<svg class="w-4 h-4" fill="none" stroke="#2563EB" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>';
+    var chevron = '<svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>';
+    var rowsF = folders.map(function(f){
+      return '<button onclick="openKasIplFolderById(\''+f.id+'\')" class="w-full px-3 py-3 flex items-center gap-3 active:bg-gray-50 transition text-left">'+
+        '<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#EFF6FF;">'+icon+'</div>'+
+        '<div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">'+_escHtml_(f.name)+'</p>'+
+        '<p class="text-xs text-gray-400 mt-0.5">'+_escHtml_(f.date || 'Folder laporan')+'</p></div>'+chevron+'</button>';
+    }).join('');
+    var rowsFile = files.map(function(fl){
+      var url = fl.url || fl.viewUrl || ('https://drive.google.com/file/d/'+fl.id+'/view');
+      return '<a href="'+url+'" target="_blank" rel="noopener" class="w-full px-3 py-3 flex items-center gap-3 active:bg-gray-50 transition text-left">'+
+        '<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#F5F3FF;">'+icon+'</div>'+
+        '<div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-900 truncate">'+_escHtml_(fl.name)+'</p>'+
+        '<p class="text-xs text-gray-400 mt-0.5">File laporan</p></div>'+chevron+'</a>';
+    }).join('');
+    box2.innerHTML = rowsF + rowsFile;
+  }).catch(function(){
+    var box2 = document.getElementById('kasInfoIplList');
+    if(box2) box2.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat</p>';
+  });
+}
+
+// Buka browser folder Kas IPL untuk folder tertentu (reuse viewer + _loadPubKasFolder_)
+function openKasIplFolderById(folderId){
+  if(typeof _isPenyewaUser_ === 'function' && _isPenyewaUser_()){ showToast('Laporan kas hanya untuk pemilik rumah', 'info'); return; }
+  var modal = document.getElementById('pedomanViewer');
+  var frame = document.getElementById('pedomanViewerFrame');
+  var title = document.getElementById('pedomanViewerTitle');
+  if(!modal || !frame) return;
+  if(title) title.innerText = 'Laporan Kas IPL';
+  frame.style.background = ''; frame.style.backgroundColor = ''; frame.style.display = 'none';
+  var oldBanner = document.getElementById('kasIplFallbackBanner'); if(oldBanner) oldBanner.remove();
+  modal.classList.remove('hidden');
+  try { history.pushState({ pedomanViewer: true }, ''); } catch(e){}
+  var frameParent = frame.parentElement;
+  if(frameParent) frameParent.style.position = 'relative';
+  _loadPubKasFolder_(frameParent, folderId || '');
 }
 
 var _aktivitasTerbaruExpanded_ = false;
@@ -10426,6 +10454,7 @@ function _renderKasReport_(res){
   var transparansiBlock = _kasTransparansiHtml_(res);
   var infoKasIplBlock = _kasInfoIplListHtml_();
   body.innerHTML = summary + table + transparansiBlock + catBlockIn + catBlock + note + infoKasIplBlock;
+  if (typeof _loadKasInfoIplList_ === 'function') _loadKasInfoIplList_(); // isi list Info Kas IPL dinamis dari folder
 
   // Populate dropdown bulan untuk Unduh PDF (hanya bulan yang ada transaksi)
   var sel = document.getElementById('kasPdfMonth');
