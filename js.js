@@ -11303,6 +11303,23 @@ function triggerKasIplUpload() {
   if (input) { input.value = ''; input.click(); }
 }
 
+// Buat folder baru di folder yang sedang dibuka (admin)
+function createKasIplFolderPrompt() {
+  var name = (window.prompt('Nama folder baru (mis. 2025):') || '').trim();
+  if (!name) return;
+  var btn = document.getElementById('kasIplNewFolderBtn');
+  if (btn) btn.disabled = true;
+  gasPost_('adminCreateKasIPLFolder', { name: name, parentId: _kasIplCurrentFolder_ || '' })
+    .then(function(res){
+      if (btn) btn.disabled = false;
+      if (!res || !res.ok) { showToast((res && res.error) || 'Gagal membuat folder', 'error'); return; }
+      showToast('Folder "' + name + '" dibuat', 'success');
+      loadKasIplContents(_kasIplCurrentFolder_ || '');
+      if (typeof loadAdminKasIplPreview === 'function') loadAdminKasIplPreview();
+    })
+    .catch(function(){ if (btn) btn.disabled = false; showToast('Gagal membuat folder', 'error'); });
+}
+
 function handleKasIplUpload(input) {
   var file = input.files && input.files[0];
   if (!file) return;
