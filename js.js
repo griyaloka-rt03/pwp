@@ -11258,16 +11258,22 @@ function renderKasIplBrowser(res) {
 
   // FOLDER dulu
   html += folders.map(function(fo) {
-    return '<button onclick="loadKasIplContents(\'' + fo.id + '\')" class="w-full bg-gray-50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3 active:scale-[0.99] transition text-left">' +
-      '<div class="flex items-center gap-3 min-w-0 flex-1">' +
+    var jsFoName = (fo.name || '').replace(/'/g, "\\'");
+    return '<div class="bg-gray-50 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">' +
+      '<button onclick="loadKasIplContents(\'' + fo.id + '\')" class="flex items-center gap-3 min-w-0 flex-1 text-left active:opacity-70 transition">' +
         '<div class="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">' +
           '<svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' +
         '</div>' +
         '<div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-900 truncate">' + _escHtml_(fo.name) + '</p>' +
         '<p class="text-[11px] text-gray-400">Folder</p></div>' +
+      '</button>' +
+      '<div class="flex items-center gap-1.5 flex-shrink-0">' +
+        '<button onclick="deleteKasIplFolderConfirm(\'' + fo.id + '\',\'' + jsFoName + '\')" class="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center active:scale-95 transition" title="Hapus folder">' +
+          '<svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>' +
+        '</button>' +
+        '<svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>' +
       '</div>' +
-      '<svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>' +
-    '</button>';
+    '</div>';
   }).join('');
 
   // FILE
@@ -11303,21 +11309,56 @@ function triggerKasIplUpload() {
   if (input) { input.value = ''; input.click(); }
 }
 
-// Buat folder baru di folder yang sedang dibuka (admin)
+// Buat folder baru (modal in-frame)
 function createKasIplFolderPrompt() {
-  var name = (window.prompt('Nama folder baru (mis. 2025):') || '').trim();
-  if (!name) return;
-  var btn = document.getElementById('kasIplNewFolderBtn');
-  if (btn) btn.disabled = true;
+  var modal = document.getElementById('kasIplNewFolderModal');
+  var inp = document.getElementById('kasIplNewFolderInput');
+  var err = document.getElementById('kasIplNewFolderError');
+  if (!modal) return;
+  if (inp) inp.value = '';
+  if (err) err.classList.add('hidden');
+  modal.classList.remove('hidden');
+  setTimeout(function(){ if (inp) inp.focus(); }, 60);
+}
+function closeKasIplNewFolder() {
+  var modal = document.getElementById('kasIplNewFolderModal');
+  if (modal) modal.classList.add('hidden');
+}
+function submitKasIplNewFolder() {
+  var inp = document.getElementById('kasIplNewFolderInput');
+  var err = document.getElementById('kasIplNewFolderError');
+  var btn = document.getElementById('kasIplNewFolderSubmit');
+  var name = (inp ? inp.value : '').trim();
+  if (!name) { if (err) { err.innerText = 'Nama folder wajib diisi'; err.classList.remove('hidden'); } return; }
+  if (btn) { btn.disabled = true; btn.innerText = 'Membuat...'; }
   gasPost_('adminCreateKasIPLFolder', { name: name, parentId: _kasIplCurrentFolder_ || '' })
     .then(function(res){
-      if (btn) btn.disabled = false;
-      if (!res || !res.ok) { showToast((res && res.error) || 'Gagal membuat folder', 'error'); return; }
+      if (btn) { btn.disabled = false; btn.innerText = 'Buat'; }
+      if (!res || !res.ok) { if (err) { err.innerText = (res && res.error) || 'Gagal membuat folder'; err.classList.remove('hidden'); } return; }
+      closeKasIplNewFolder();
       showToast('Folder "' + name + '" dibuat', 'success');
       loadKasIplContents(_kasIplCurrentFolder_ || '');
       if (typeof loadAdminKasIplPreview === 'function') loadAdminKasIplPreview();
     })
-    .catch(function(){ if (btn) btn.disabled = false; showToast('Gagal membuat folder', 'error'); });
+    .catch(function(){ if (btn) { btn.disabled = false; btn.innerText = 'Buat'; } if (err) { err.innerText = 'Gagal membuat folder'; err.classList.remove('hidden'); } });
+}
+
+// Hapus folder (beserta isinya → Trash)
+function deleteKasIplFolderConfirm(id, name) {
+  showDeleteConfirm('Hapus folder "' + (name || '') + '" beserta seluruh isinya? Folder dipindah ke Trash Drive.', function() {
+    deleteKasIplFolder(id);
+  });
+}
+function deleteKasIplFolder(id) {
+  gasPost_('adminDeleteKasIPLFolder', { folderId: id })
+    .then(function(res) {
+      if (!res || !res.ok) { showToast((res && res.error) || 'Gagal menghapus folder', 'error'); return; }
+      closeDeleteConfirm();
+      showToast('Folder dihapus', 'success');
+      loadKasIplContents(_kasIplCurrentFolder_ || '');
+      if (typeof loadAdminKasIplPreview === 'function') loadAdminKasIplPreview();
+    })
+    .catch(function() { showToast('Gagal menghapus folder', 'error'); });
 }
 
 function handleKasIplUpload(input) {
