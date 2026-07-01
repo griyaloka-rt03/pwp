@@ -1053,7 +1053,7 @@ function gasPost_(action, body) {
             // Auto-load paid months berdasarkan email dari lookup result
             // (cover: admin bantu warga, dan warga tidak login)
             // SELALU fetch fresh per blok — jangan pakai cache dari blok sebelumnya
-            var lookupEmail = res.email || '';
+            var lookupEmail = res.email || res.noHp || ''; // warga tanpa email → pakai No HP (identitas polimorfik)
             if (lookupEmail) {
               // Reset cache dulu agar data blok lama tidak carry-over
               wargaPaidMonths    = null;
@@ -1067,8 +1067,9 @@ function gasPost_(action, body) {
                 .then(function(pmRes) {
                   showDetailPaymentSkeleton_(false);
                   if (!pmRes || !pmRes.ok) return;
-                  wargaPaidMonths  = pmRes.paid;
-                  wargaRateByMonth = pmRes.rateByMonth || null;
+                  wargaPaidMonths    = pmRes.paid;
+                  wargaPendingMonths = pmRes.pending || null; // agar chip pending ikut berwarna
+                  wargaRateByMonth   = pmRes.rateByMonth || null;
                   applyPaidMonthsData_(pmRes);
                 })
                 .catch(function() {
