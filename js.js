@@ -942,11 +942,8 @@ function gasPost_(action, body) {
 
       const related = res.relatedBlocks || [];
 
-      const hasValidEmail =
-        res.email && res.email.trim().length > 0;
-
+      // Multi-rumah cukup dideteksi dari relatedBlocks (backend match email ATAU no HP)
       const isMultiDetected =
-        hasValidEmail &&
         related.length > 1 &&
         inputBloks.length === 1;
 
@@ -6989,10 +6986,25 @@ function openTunggakanDetail(_isRefresh) {
     }
   } else {
     var _isMultiBlokList = _modalBloks.length > 1;
-    listEl.innerHTML = cache.items.map(function(d) {
+    // Gabungkan item bulan yang sama dari beberapa blok → 1 baris "(D1-14, D1-15)" nominal dijumlah
+    var _groupedItems = [];
+    var _groupMap = {};
+    cache.items.forEach(function(d) {
+      var gk = (d.year || '') + '_' + (d.monthIdx0 != null ? d.monthIdx0 : d.name);
+      if (_groupMap[gk]) {
+        _groupMap[gk].amount += Number(d.amount || 0);
+        if (d.blok && _groupMap[gk].bloks.indexOf(d.blok) === -1) _groupMap[gk].bloks.push(d.blok);
+      } else {
+        var g = { name: d.name, year: d.year, monthIdx0: d.monthIdx0,
+                  amount: Number(d.amount || 0), bloks: d.blok ? [d.blok] : [] };
+        _groupMap[gk] = g;
+        _groupedItems.push(g);
+      }
+    });
+    listEl.innerHTML = _groupedItems.map(function(d) {
       var amt = 'Rp ' + Number(d.amount || 0).toLocaleString('id-ID');
       var lbl = (d.name || '') + (d.year ? ' ' + d.year : '') +
-                ((_isMultiBlokList && d.blok) ? ' <span class="text-xs text-gray-400 font-medium">(' + d.blok + ')</span>' : '');
+                ((_isMultiBlokList && d.bloks.length) ? ' <span class="text-xs text-gray-400 font-medium">(' + d.bloks.join(', ') + ')</span>' : '');
       var isOverdue = d.year < new Date().getFullYear() ||
         (d.year === new Date().getFullYear() && d.monthIdx0 < new Date().getMonth());
       return '<div class="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">' +
