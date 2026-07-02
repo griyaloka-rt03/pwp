@@ -6264,6 +6264,24 @@ function loadHomeData() {
   if (typeof _renderSaldoKasCard_ === 'function') _renderSaldoKasCard_();
   if (typeof _renderKasTransparansi_ === 'function') _renderKasTransparansi_();
   if (typeof _checkVotingBanner_ === 'function') _checkVotingBanner_();
+  if (typeof _loadResidentTarif_ === 'function') _loadResidentTarif_();
+}
+
+// Load tarif IPL resident (kolom E tahun berjalan) sejak login → "Tarif IPL Anda" tak lagi 200 statis
+function _loadResidentTarif_() {
+  if (typeof currentUser === 'undefined' || !currentUser || !currentUser.email) { window.PWP_RESIDENT_RATE = 0; return; }
+  gasGet_('getWargaPaidMonths', { email: currentUser.email }).then(function(res){
+    if (!res || !res.ok) return;
+    var rate = Number(res.defaultRate) || 0;
+    if (!rate && res.rateByMonth) {
+      var yr = new Date().getFullYear();
+      var rm = res.rateByMonth[yr] || {};
+      for (var k in rm) { if (rm[k] > 0) { rate = Number(rm[k]); break; } }
+    }
+    window.PWP_RESIDENT_RATE = rate || 0;
+    try { if (typeof renderTarifCards_ === 'function') renderTarifCards_(); } catch(e){}
+    try { if (typeof renderHunianCards_ === 'function') renderHunianCards_(); } catch(e){}
+  }).catch(function(){});
 }
 
 function _updatePedomanHint_() {
