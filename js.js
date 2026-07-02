@@ -1349,6 +1349,58 @@ function gasPost_(action, body) {
         .length || 1;
     }
 
+    // ===== STATUS IPL PER BLOK (grid matrix) =====
+    function renderBlokStatusGrid_() {
+      var wrap = document.getElementById('blokStatusWrap');
+      var grid = document.getElementById('blokStatusGrid');
+      if (!wrap || !grid) return;
+
+      var bloks  = window._wargaBloks_ || [];
+      var paidBB = window._paidByBlok_ || null;
+      if (!bloks.length || !paidBB || !selectedYear) {
+        wrap.classList.add('hidden');
+        return;
+      }
+
+      var yr   = parseInt(selectedYear, 10);
+      var now  = new Date();
+      var curY = now.getFullYear(), curM = now.getMonth(), curD = now.getDate();
+      var MON  = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
+      var yearLbl = document.getElementById('blokStatusYear');
+      if (yearLbl) yearLbl.textContent = '(' + yr + ')';
+
+      var html = '';
+      bloks.forEach(function(b) {
+        var paid = (paidBB[b] && paidBB[b][yr]) ? paidBB[b][yr] : [];
+        var pend = (window._pendingByBlok_ && window._pendingByBlok_[b] && window._pendingByBlok_[b][yr])
+                   ? window._pendingByBlok_[b][yr] : [];
+        html += '<div class="flex items-center gap-1.5">';
+        html += '<span class="w-12 shrink-0 text-[11px] font-semibold text-gray-600">' + b + '</span>';
+        html += '<div class="grid grid-cols-12 gap-1 flex-1">';
+        for (var m = 0; m < 12; m++) {
+          var cls, title = b + ' — ' + MON[m] + ' ' + yr + ': ';
+          if (paid.indexOf(m) !== -1) {
+            cls = 'bg-emerald-100 border-emerald-200 text-emerald-700'; title += 'Lunas';
+          } else if (pend.indexOf(m) !== -1) {
+            cls = 'bg-amber-100 border-amber-300 text-amber-700'; title += 'Menunggu konfirmasi';
+          } else {
+            // jatuh tempo = tgl 5 bulan berikutnya (aturan sama dengan chip bulan)
+            var overdue = yr < curY || (yr === curY && (m + 1 < curM || (m + 1 === curM && curD > 5)));
+            if (overdue) { cls = 'bg-rose-100 border-rose-200 text-rose-600'; title += 'Tunggakan'; }
+            else         { cls = 'bg-gray-50 border-gray-200 text-gray-400';  title += 'Belum jatuh tempo'; }
+          }
+          html += '<span title="' + title + '" aria-label="' + title + '"' +
+                  ' class="h-6 rounded border text-[9px] leading-none flex items-center justify-center ' + cls + '">' +
+                  MON[m][0] + '</span>';
+        }
+        html += '</div></div>';
+      });
+
+      grid.innerHTML = html;
+      wrap.classList.remove('hidden');
+    }
+
     function updateChipStates_() {
       if (!selectedYear) return;
 
@@ -1449,6 +1501,8 @@ function gasPost_(action, body) {
           btn.style.cursor  = '';
         }
       });
+
+      renderBlokStatusGrid_();
     }
 
     // ===== AUTO CALC =====
@@ -1574,6 +1628,8 @@ function gasPost_(action, body) {
       wargaRateByMonth   = res.rateByMonth || null;
       window._wargaBloks_ = res.bloks || null;
       window._rateByBlokMonth_ = res.rateByBlokMonth || null;
+      if (res.paidByBlok)    window._paidByBlok_    = res.paidByBlok;
+      if (res.pendingByBlok) window._pendingByBlok_ = res.pendingByBlok;
 
       // === 1) Set rate & hunian card ===
       // Priority 1: defaultRate dari server (sudah hitung AK-AP + fallback E)
@@ -6872,7 +6928,8 @@ function openTunggakanDetail(_isRefresh) {
     return;
   }
 
-  blokEl.innerText  = 'Blok ' + (cache.blok || '-');
+  var _modalBloks = (cache.bloks && cache.bloks.length) ? cache.bloks : [cache.blok || '-'];
+  blokEl.innerText  = 'Blok ' + _modalBloks.join(', ');
   totalEl.innerText = 'Rp ' + Number(cache.total || 0).toLocaleString('id-ID');
 
   // Tambah info jatuh tempo di modal
@@ -6931,9 +6988,11 @@ function openTunggakanDetail(_isRefresh) {
       listEl.innerHTML = '';
     }
   } else {
+    var _isMultiBlokList = _modalBloks.length > 1;
     listEl.innerHTML = cache.items.map(function(d) {
       var amt = 'Rp ' + Number(d.amount || 0).toLocaleString('id-ID');
-      var lbl = (d.name || '') + (d.year ? ' ' + d.year : '');
+      var lbl = (d.name || '') + (d.year ? ' ' + d.year : '') +
+                ((_isMultiBlokList && d.blok) ? ' <span class="text-xs text-gray-400 font-medium">(' + d.blok + ')</span>' : '');
       var isOverdue = d.year < new Date().getFullYear() ||
         (d.year === new Date().getFullYear() && d.monthIdx0 < new Date().getMonth());
       return '<div class="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">' +
