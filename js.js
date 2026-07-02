@@ -1059,6 +1059,7 @@ function gasPost_(action, body) {
               wargaPaidMonths    = null;
               wargaPendingMonths = null;
               wargaRateByMonth   = null;
+              window.PWP_RESIDENT_RATE = 0;
               userOverrideRateByYear = {};
               selectedMonthsByYear = {};
 
@@ -1608,6 +1609,9 @@ function gasPost_(action, body) {
           }
         }
       }
+
+      // Tarif IPL warga = rate dari kolom E (per resident), dipakai utk render "Tarif IPL Anda"
+      window.PWP_RESIDENT_RATE = rateToApply || 0;
 
       if (rateToApply > 0) {
         selectedRate = rateToApply;
@@ -4787,6 +4791,7 @@ function gasPost_(action, body) {
       wargaPaidMonths    = null;
       wargaPendingMonths = null;
       wargaRateByMonth   = null;
+      window.PWP_RESIDENT_RATE = 0; // reset tarif resident saat logout
       userOverrideRateByYear = {};
       selectedMonthsByYear = {};
       homeDataCache.tunggakan = null;
@@ -16484,11 +16489,15 @@ function renderTarifCards_(opts) {
   opts = opts || {};
   var grid = document.getElementById('tarifGrid');
   if (!grid) return;
-  var tarifs = (window.PWP_TARIFS && window.PWP_TARIFS.length)
-    ? window.PWP_TARIFS
-    : [{ label: 'Dihuni', nominal: 200000 }, { label: 'Tidak Dihuni', nominal: 175000 }];
-  var loggedIn = !!opts.loggedIn;
-  var rate = (opts.rate != null) ? Number(opts.rate) : null;
+  // Tarif resident (kolom E) diketahui → tampilkan itu sebagai "Tarif IPL Anda"
+  var residentRate = Number(window.PWP_RESIDENT_RATE) || 0;
+  var tarifs = residentRate > 0
+    ? [{ label: 'Tarif IPL Anda', nominal: residentRate }]
+    : ((window.PWP_TARIFS && window.PWP_TARIFS.length)
+        ? window.PWP_TARIFS
+        : [{ label: 'Dihuni', nominal: 200000 }, { label: 'Tidak Dihuni', nominal: 175000 }]);
+  var loggedIn = !!opts.loggedIn || residentRate > 0;
+  var rate = (opts.rate != null) ? Number(opts.rate) : (residentRate > 0 ? residentRate : null);
   grid.style.display = 'grid';
   grid.style.gridTemplateColumns = 'repeat(' + tarifs.length + ',minmax(0,1fr))';
   var badge = '<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:#1d4ed8;background:#dbeafe;border-radius:999px;padding:2px 7px;margin-left:6px;letter-spacing:0.02em;vertical-align:middle;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg>Tarif Anda</span>';
@@ -16513,6 +16522,16 @@ function renderTarifCards_(opts) {
 function renderHunianCards_() {
   var box = document.getElementById('hunianCards');
   if (!box) return;
+  // Kalau tarif resident (kolom E) sudah diketahui → tampilkan itu (bukan OrgSettings)
+  var residentRate = Number(window.PWP_RESIDENT_RATE) || 0;
+  if (residentRate > 0) {
+    box.style.gridTemplateColumns = '1fr';
+    box.innerHTML = '<button type="button" data-value="' + residentRate + '" data-label="Tarif IPL Anda" class="hunian-card">'
+      + '<div class="font-medium">Tarif IPL Anda</div>'
+      + '<div class="text-xs mt-1 opacity-80">Rp' + residentRate.toLocaleString('id-ID') + ' / bulan</div>'
+      + '</button>';
+    return;
+  }
   var tarifs = (window.PWP_TARIFS && window.PWP_TARIFS.length)
     ? window.PWP_TARIFS
     : [{ label: 'Dihuni', nominal: 200000 }, { label: 'Tidak Dihuni', nominal: 175000 }];
