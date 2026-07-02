@@ -4242,16 +4242,29 @@ function gasPost_(action, body) {
   function _checkKelolaPenyewaMenu_() {
     // Hanya PEMILIK yang lihat "Kelola Penyewa". getMyPenyewaBloks mengembalikan
     // blok-milik (baris non-penyewa) → kosong utk penyewa murni → menu disembunyikan.
-    // Reset hidden dulu agar deterministik (anti flicker).
     var group = document.getElementById('sayaPropertiGroup');
-    _myPenyewaBloks_ = [];
-    if (group) group.classList.add('hidden');
-    if (!group || !currentUser || !currentUser.email) return Promise.resolve();
+    if (!group || !currentUser || !currentUser.email) {
+      _myPenyewaBloks_ = [];
+      if (group) group.classList.add('hidden');
+      return Promise.resolve();
+    }
+    // Tampilkan LANGSUNG dari cache sesi (tanpa nunggu network) — validasi ulang di background
+    var cached = _myPenyewaBloks_.length ? _myPenyewaBloks_ : (currentUser._penyewaBloks || []);
+    if (cached.length) {
+      _myPenyewaBloks_ = cached;
+      group.classList.remove('hidden');
+    } else {
+      group.classList.add('hidden');
+    }
     return gasGet_('getMyPenyewaBloks', { email: currentUser.email })
       .then(function(res) {
-        if (!res || !res.ok || !res.data || !res.data.length) return; // bukan pemilik → tetap hidden
-        _myPenyewaBloks_ = res.data;
-        group.classList.remove('hidden');
+        _myPenyewaBloks_ = (res && res.ok && res.data) ? res.data : [];
+        group.classList.toggle('hidden', !_myPenyewaBloks_.length);
+        // Simpan ke sesi supaya kunjungan berikutnya instan
+        if (currentUser) {
+          currentUser._penyewaBloks = _myPenyewaBloks_;
+          if (typeof saveSession === 'function') saveSession(currentUser);
+        }
       })
       .catch(function() {});
   }
@@ -6604,7 +6617,8 @@ function loadHomeTunggakan() {
   var ctaEl = document.getElementById('tunggakanLoginCTA');
   if (ctaEl) ctaEl.remove();
 
-  nomEl.innerText = 'Memuat...';
+  // Skeleton shimmer — tanpa teks, ringan (CSS only)
+  nomEl.innerHTML = '<span class="inline-block h-7 w-32 rounded-lg bg-white/20 animate-pulse align-middle"></span>';
   return gasGet_('getWargaTunggakan', { email: currentUser.email, bloks: (currentUser.wargaData || []).map(function(d){return d.blok;}).filter(Boolean).join(',') })
     .then(function(res) {
       console.log('[tunggakan res]', JSON.stringify(res));
