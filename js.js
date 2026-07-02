@@ -1743,6 +1743,15 @@ function gasPost_(action, body) {
         updateNominalBreakdown_();
         updateSubmitButtonState();
       }
+
+      // Re-render kartu tarif dgn rate resident (kolom E), lalu tandai terpilih
+      try { if (typeof renderHunianCards_ === 'function') renderHunianCards_(); } catch(e){}
+      try { if (typeof renderTarifCards_ === 'function') renderTarifCards_(); } catch(e){}
+      try {
+        document.querySelectorAll('#hunianCards .hunian-card').forEach(function(card){
+          card.classList.toggle('active', Number(card.dataset.value) === selectedRate);
+        });
+      } catch(e){}
     }
 
     // ===== BULAN CHIP =====
