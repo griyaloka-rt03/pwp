@@ -1549,6 +1549,22 @@ function gasPost_(action, body) {
           ? wargaRateByMonth[yrInt]
           : null;
 
+        // Multi-blok: pengali dinamis — hanya blok yang MASIH menagih bulan itu
+        // (belum bayar & tidak pending) yang ikut dihitung
+        var multiBloks = (window._wargaBloks_ && window._wargaBloks_.length > 1 && window._paidByBlok_)
+          ? window._wargaBloks_ : null;
+        function blokOwes_(b, mIdx) {
+          var paid = (window._paidByBlok_[b] && window._paidByBlok_[b][yrInt]) || [];
+          var pend = (window._pendingByBlok_ && window._pendingByBlok_[b] && window._pendingByBlok_[b][yrInt]) || [];
+          return paid.indexOf(mIdx) === -1 && pend.indexOf(mIdx) === -1;
+        }
+        function blokRateFor_(b, mIdx) {
+          var brm = window._rateByBlokMonth_ && window._rateByBlokMonth_[b];
+          var brmYear = brm ? (brm[yrInt] || brm) : null;
+          var v = brmYear ? brmYear[yrInt + '_' + mIdx] : 0;
+          return Number(v) || Math.round(selectedRate / multiBloks.length);
+        }
+
         // Group bulan berdasarkan rate-nya
         var rateGroups = {}; // { '200000': [0,1,2], '175000': [2,3] }
 
@@ -1558,8 +1574,12 @@ function gasPost_(action, body) {
           if (overrideForYear) {
             // User sudah manual pilih hunian — pakai override
             rate = overrideForYear;
+          } else if (multiBloks) {
+            multiBloks.forEach(function(b) {
+              if (blokOwes_(b, mIdx)) rate += blokRateFor_(b, mIdx);
+            });
           } else if (rateMap) {
-            // Cek rateByMonth per bulan spesifik (dari helper AK-AP di sheet)
+            // Cek rateByMonth per bulan spesifik
             var key = yrInt + '_' + mIdx;
             if (rateMap[key] && rateMap[key] > 0) {
               rate = rateMap[key];
@@ -1581,22 +1601,16 @@ function gasPost_(action, body) {
 
           var labels = mIdxs.map(function(i){ return monthNames[i]; }).join(', ');
 
-          // Tampilkan breakdown per blok jika multi-blok
-          var bloksArr = (wargaRateByMonth && window._wargaBloks_) ? window._wargaBloks_ : null;
-          if (bloksArr && bloksArr.length > 1) {
-            // Render per blok
-            bloksArr.forEach(function(blokName) {
-              // Ambil rate blok ini dari rateByBlokMonth[blokName][yr]
-              var blokRate = rateNum / bloksArr.length; // fallback equal split
-              if (window._rateByBlokMonth_ && window._rateByBlokMonth_[blokName]) {
-                var brmYear = window._rateByBlokMonth_[blokName][yrInt] || window._rateByBlokMonth_[blokName];
-                var key0 = yrInt + '_' + mIdxs[0];
-                if (brmYear && brmYear[key0]) blokRate = brmYear[key0];
-              }
-              var blokSubtotal = blokRate * mIdxs.length;
+          if (multiBloks) {
+            // Render per blok — hanya bulan yang blok itu masih menagih
+            multiBloks.forEach(function(blokName) {
+              var owedIdxs = mIdxs.filter(function(mi){ return blokOwes_(blokName, mi); });
+              if (!owedIdxs.length) return; // blok ini sudah lunas semua bulan grup ini
+              var blokSubtotal = owedIdxs.reduce(function(s, mi){ return s + blokRateFor_(blokName, mi); }, 0);
+              var owedLabels = owedIdxs.map(function(i){ return monthNames[i]; }).join(', ');
               breakdownHtml +=
                 '<div class="flex justify-between text-xs text-gray-500 mt-1">' +
-                  '<span>' + labels + ' ' + yr + ' (' + blokName + ')</span>' +
+                  '<span>' + owedLabels + ' ' + yr + ' (' + blokName + ')</span>' +
                   '<span>Rp ' + Number(blokSubtotal).toLocaleString('id-ID') + '</span>' +
                 '</div>';
             });
@@ -7152,7 +7166,7 @@ function loadHomeInfo() {
       '<div class="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center">' +
         '<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
       '</div>' +
-      '<p class="text-sm font-semibold text-gray-500 text-center">Login untuk melihat Info Cluster</p>' +
+      '<p class="text-sm font-semibold text-gray-500 text-center">Login untuk melihat Info Lingkungan</p>' +
       '<button onclick="openMePage()" class="mt-1 bg-primary text-white text-xs font-semibold px-4 py-2 rounded-xl active:scale-95 transition">Masuk Sekarang</button>' +
     '</div>';
     return;
@@ -7801,7 +7815,7 @@ function backToEmailStep() {
   }
 }
 
-// Alias used by login-prompt buttons in Info Cluster, Fasum, Pedoman, etc.
+// Alias used by login-prompt buttons in Info Lingkungan, Fasum, Pedoman, etc.
 function openMePage() { openPageSaya(); }
 
 function closePageSaya() {
