@@ -290,8 +290,12 @@ function gasPost_(action, body) {
         };
         var _label = _h < 11 ? 'pagi' : _h < 15 ? 'siang' : _h < 18 ? 'sore' : 'malam';
         var _fullName = (currentUser.fullName || currentUser.email || '');
-        // icon waktu diganti foto profil di kiri → teks cukup "Sore, Nama"
-        greetTxt.innerHTML = (_label.charAt(0).toUpperCase() + _label.slice(1)) + ', ' + _fullName;
+        // Icon waktu + animasi masuk halus (naik + fade sekali, lalu diam)
+        greetTxt.innerHTML =
+          '<span class="greet-icon" style="display:inline-block;animation:greetIconIn .6s cubic-bezier(0.34,1.56,0.64,1) both;">' +
+            (_icons[_label] || '') +
+          '</span>' +
+          (_label.charAt(0).toUpperCase() + _label.slice(1)) + ', ' + _fullName;
         greetEl.classList.remove('hidden');
         greetEl.classList.add('flex');
       }

@@ -854,6 +854,12 @@ html, body {
       radial-gradient(120% 90% at 50% 18%, #EEF4FF 0%, #F7FAFF 42%, #ffffff 100%);
   }
 
+  /* Icon waktu di greeting header — masuk sekali dengan spring kecil */
+  @keyframes greetIconIn {
+    from { opacity: 0; transform: translateY(4px) scale(0.6); }
+    to   { opacity: 1; transform: translateY(0)   scale(1); }
+  }
+
   .splash-logo {
     opacity: 0;
     animation: splashLogoIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -863,9 +869,9 @@ html, body {
   /* Panggung 3D untuk efek pintu membuka */
   .splash-stage {
     position: relative;
-    width: 104px;
-    height: 104px;
-    perspective: 520px;
+    width: 128px;
+    height: 128px;
+    perspective: 640px;
   }
   .splash-stage img { position: relative; z-index: 1; }
 
