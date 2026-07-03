@@ -534,7 +534,7 @@ function gasPost_(action, body) {
         if (!el) return;
         el.readOnly = true;
         el.style.borderBottom = '';
-        el.style.paddingBottom = '';
+        el.style.paddingBottom = ''; el.style.background = ''; el.style.borderRadius = '';
       });
       editBtn?.classList.remove('hidden');
       saveBtn?.classList.add('hidden');
@@ -5145,10 +5145,10 @@ function gasPost_(action, body) {
     var saveBtn = document.getElementById('sayaSaveBtn');
     var cancelBtn = document.getElementById('sayaCancelBtn');
     // Restore original values from data attributes
-    if (namaEl) { namaEl.value = namaEl.dataset.original || namaEl.value; namaEl.readOnly = true; namaEl.style.borderBottom = ''; namaEl.style.paddingBottom = ''; }
-    if (hpEl)   { hpEl.value  = hpEl.dataset.original  || hpEl.value;   hpEl.readOnly  = true; hpEl.style.borderBottom  = ''; hpEl.style.paddingBottom  = ''; }
-    if (alamatEl) { alamatEl.value = alamatEl.dataset.original || alamatEl.value; alamatEl.readOnly = true; alamatEl.style.borderBottom = ''; alamatEl.style.paddingBottom = ''; }
-    ['sayaJmlMobil','sayaJmlMotor'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.value=el.dataset.original||el.value; el.readOnly=true; el.style.borderBottom=''; el.style.paddingBottom=''; } });
+    if (namaEl) { namaEl.value = namaEl.dataset.original || namaEl.value; namaEl.readOnly = true; namaEl.style.borderBottom = ''; namaEl.style.paddingBottom = ''; namaEl.style.background = ''; namaEl.style.borderRadius = ''; }
+    if (hpEl)   { hpEl.value  = hpEl.dataset.original  || hpEl.value;   hpEl.readOnly  = true; hpEl.style.borderBottom  = ''; hpEl.style.paddingBottom = ''; hpEl.style.background = ''; hpEl.style.borderRadius = ''; }
+    if (alamatEl) { alamatEl.value = alamatEl.dataset.original || alamatEl.value; alamatEl.readOnly = true; alamatEl.style.borderBottom = ''; alamatEl.style.paddingBottom = ''; alamatEl.style.background = ''; alamatEl.style.borderRadius = ''; }
+    ['sayaJmlMobil','sayaJmlMotor'].forEach(function(id){ var el=document.getElementById(id); if(el){ el.value=el.dataset.original||el.value; el.readOnly=true; el.style.borderBottom=''; el.style.paddingBottom=''; el.style.background=''; el.style.borderRadius=''; } });
     if (editBtn)   editBtn.classList.remove('hidden');
     if (saveBtn)   saveBtn.classList.add('hidden');
     if (cancelBtn) cancelBtn.classList.add('hidden');
@@ -5177,9 +5177,11 @@ function gasPost_(action, body) {
       el.readOnly = false;
       el.classList.remove('text-gray-900');
       el.classList.add('text-gray-900');
-      // Visual: tambah underline border bawah sebagai edit indicator
+      // Visual: underline + latar biru muda agar jelas field-nya bisa diketik
       el.style.borderBottom = '1.5px solid #2563eb';
       el.style.paddingBottom = '2px';
+      el.style.background = '#eff6ff';
+      el.style.borderRadius = '6px';
     });
 
     if (editBtn)   editBtn.classList.add('hidden');
@@ -5257,7 +5259,7 @@ function gasPost_(action, body) {
             if (!el) return;
             el.readOnly = true;
             el.style.borderBottom = '';
-            el.style.paddingBottom = '';
+            el.style.paddingBottom = ''; el.style.background = ''; el.style.borderRadius = '';
           });
           document.getElementById('sayaEditBtn')?.classList.remove('hidden');
           document.getElementById('sayaSaveBtn')?.classList.add('hidden');
@@ -8022,7 +8024,7 @@ function closePageSaya() {
     if (!el) return;
     el.readOnly = true;
     el.style.borderBottom = '';
-    el.style.paddingBottom = '';
+    el.style.paddingBottom = ''; el.style.background = ''; el.style.borderRadius = '';
   });
 
   if (editBtn) editBtn.classList.remove('hidden');
