@@ -4444,15 +4444,31 @@ function gasPost_(action, body) {
       listEl.innerHTML = '<div class="text-center text-sm text-gray-400 py-8">Silakan login dulu.</div>';
       return;
     }
-    // Selalu ambil data terbaru saat dibuka (anti-stale)
-    listEl.innerHTML = '<div class="text-center text-sm text-gray-400 py-8">Memuat data...</div>';
+
+    // CACHE-FIRST: render langsung dari data yang sudah ada, refresh di background.
+    // Buka pertama = spinner; buka berikutnya = instan tanpa loading.
+    var hasCache = _myPenyewaBloks_ && _myPenyewaBloks_.length;
+    if (hasCache) {
+      _renderKelolaPenyewaList_();
+    } else {
+      listEl.innerHTML =
+        '<div class="flex flex-col items-center justify-center gap-2 py-8 text-gray-400">' +
+          '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">' +
+            '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+            '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>' +
+          '</svg>' +
+          '<p class="text-xs">Memuat data penyewa...</p>' +
+        '</div>';
+    }
     gasGet_('getMyPenyewaBloks', { email: currentUser.email })
       .then(function(res) {
         _myPenyewaBloks_ = (res && res.ok && res.data) ? res.data : [];
         _renderKelolaPenyewaList_();
       })
       .catch(function() {
-        listEl.innerHTML = '<div class="text-center text-sm text-red-400 py-8">Gagal memuat data. Coba lagi.</div>';
+        if (!hasCache) {
+          listEl.innerHTML = '<div class="text-center text-sm text-red-400 py-8">Gagal memuat data. Coba lagi.</div>';
+        }
       });
   }
 
