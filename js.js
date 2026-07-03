@@ -1507,6 +1507,30 @@ function gasPost_(action, body) {
     }
 
     // ===== AUTO CALC =====
+    // Rate 1 bulan yang "smart": jumlah rate blok yang MASIH menagih bulan itu
+    // (belum bayar & tidak pending). Dipakai breakdown & payload submit.
+    function _smartMonthRate_(yrInt, mIdx, overrideForYear) {
+      if (overrideForYear) return overrideForYear;
+      var bloks = (window._wargaBloks_ && window._wargaBloks_.length > 1 && window._paidByBlok_)
+        ? window._wargaBloks_ : null;
+      if (bloks) {
+        var rate = 0;
+        bloks.forEach(function(b) {
+          var paid = (window._paidByBlok_[b] && window._paidByBlok_[b][yrInt]) || [];
+          var pend = (window._pendingByBlok_ && window._pendingByBlok_[b] && window._pendingByBlok_[b][yrInt]) || [];
+          if (paid.indexOf(mIdx) !== -1 || pend.indexOf(mIdx) !== -1) return;
+          var brm = window._rateByBlokMonth_ && window._rateByBlokMonth_[b];
+          var brmYear = brm ? (brm[yrInt] || brm) : null;
+          var v = brmYear ? brmYear[yrInt + '_' + mIdx] : 0;
+          rate += Number(v) || Math.round(selectedRate / bloks.length);
+        });
+        if (rate > 0) return rate;
+      }
+      var rMap = wargaRateByMonth && wargaRateByMonth[yrInt];
+      if (rMap && rMap[yrInt + '_' + mIdx] > 0) return rMap[yrInt + '_' + mIdx];
+      return selectedRate;
+    }
+
     function updateNominalAuto() {
       if (manualCheckbox.checked) return;
 
@@ -2277,23 +2301,16 @@ function gasPost_(action, body) {
         })(),
 
         nominalPerTahun: (function() {
+          // Rate per bulan HARUS smart: hanya blok yang masih menagih bulan itu
+          // (sama dengan logika breakdown) — bukan rate merged semua blok.
           var result = {};
-          var houseCount = 1; // rate sudah di-merge per blok di backend
           Object.keys(selectedMonthsByYear).forEach(function(yr) {
             var yrInt  = parseInt(yr, 10);
             var months = selectedMonthsByYear[yr] || [];
             var overrideForYear = userOverrideRateByYear[yr] || null;
-            var rateMap = (!overrideForYear && wargaRateByMonth && wargaRateByMonth[yrInt])
-              ? wargaRateByMonth[yrInt]
-              : null;
             var total  = 0;
             months.forEach(function(mIdx) {
-              var rate = overrideForYear || selectedRate;
-              if (rateMap) {
-                var key = yrInt + '_' + mIdx;
-                if (rateMap[key] && rateMap[key] > 0) rate = rateMap[key];
-              }
-              total += rate * houseCount;
+              total += _smartMonthRate_(yrInt, mIdx, overrideForYear);
             });
             result[yr] = total;
           });
@@ -3380,6 +3397,7 @@ function gasPost_(action, body) {
 
   // State tahun terpilih untuk ringkasan bulan warga
   var _wargaSummaryYear_ = null;
+  var _wargaPaidFetching_ = false;
 
   // Render kalender mini status pembayaran warga (hijau=lunas, kuning=pending, abu=belum)
   function _renderWargaMonthSummary_(pendingArr, confirmedArr) {
@@ -3414,19 +3432,72 @@ function gasPost_(action, body) {
     mark(pendingArr, 'pending');
     mark(confirmedArr, 'confirmed');
 
-    var years = Object.keys(byYear).sort(function(a, b) { return Number(b) - Number(a); });
+    // Data sheet IPL per blok (kebenaran pembayaran) — fetch sekali jika belum ada
+    var paidBB = window._paidByBlok_ || null;
+    var pendBB = window._pendingByBlok_ || null;
+    var bloks  = window._wargaBloks_ || [];
+    if (!paidBB && currentUser && currentUser.email && !_wargaPaidFetching_) {
+      _wargaPaidFetching_ = true;
+      gasGet_('getWargaPaidMonths', { email: currentUser.email })
+        .then(function(res) {
+          if (res && res.ok) {
+            window._paidByBlok_    = res.paidByBlok || null;
+            window._pendingByBlok_ = res.pendingByBlok || null;
+            window._wargaBloks_    = res.bloks || window._wargaBloks_;
+            _renderWargaMonthSummary_(pendingArr, confirmedArr);
+          }
+        })
+        .catch(function() {});
+    }
+
+    // Tahun: gabungan submission + tab sheet IPL-YYYY + data paid per blok
+    var yearSet = {};
+    Object.keys(byYear).forEach(function(y) { yearSet[y] = 1; });
+    (window.PWP_IPL_YEARS || []).forEach(function(y) { yearSet[String(y)] = 1; });
+    if (paidBB) Object.keys(paidBB).forEach(function(b) {
+      Object.keys(paidBB[b] || {}).forEach(function(y) { yearSet[String(y)] = 1; });
+    });
+    var years = Object.keys(yearSet).sort(function(a, b) { return Number(b) - Number(a); });
     if (years.length === 0) { box.classList.add('hidden'); box.innerHTML = ''; return; }
 
     if (!_wargaSummaryYear_ || years.indexOf(_wargaSummaryYear_) === -1) {
       _wargaSummaryYear_ = years[0];
     }
     var yr = _wargaSummaryYear_;
+    var yrInt = parseInt(yr, 10);
     var statuses = byYear[yr] || {};
 
-    var lunasCount = 0, pendingCount = 0;
-    for (var k in statuses) {
-      if (statuses[k] === 'confirmed') lunasCount++;
-      else if (statuses[k] === 'pending') pendingCount++;
+    var isMulti = bloks.length > 1 && paidBB;
+
+    // Status per blok+bulan dari data sheet (confirmed) + pending
+    function blokStatus(b, m) {
+      var paid = (paidBB && paidBB[b] && paidBB[b][yrInt]) || [];
+      if (paid.indexOf(m) !== -1) return 'confirmed';
+      var pend = (pendBB && pendBB[b] && pendBB[b][yrInt]) || [];
+      if (pend.indexOf(m) !== -1) return 'pending';
+      return '';
+    }
+
+    // Single blok: lengkapi statuses dengan data sheet (sheet = kebenaran)
+    if (!isMulti && paidBB && bloks.length === 1) {
+      for (var ms = 0; ms < 12; ms++) {
+        var st1 = blokStatus(bloks[0], ms);
+        if (st1 === 'confirmed') statuses[ms] = 'confirmed';
+        else if (st1 === 'pending' && statuses[ms] !== 'confirmed') statuses[ms] = 'pending';
+      }
+    }
+
+    var lunasCount = 0;
+    if (isMulti) {
+      // Lunas = SEMUA blok sudah bayar bulan itu
+      for (var mAll = 0; mAll < 12; mAll++) {
+        var allPaid = bloks.every(function(b) { return blokStatus(b, mAll) === 'confirmed'; });
+        if (allPaid) lunasCount++;
+      }
+    } else {
+      for (var k in statuses) {
+        if (statuses[k] === 'confirmed') lunasCount++;
+      }
     }
 
     // Dropdown tahun (jika >1 tahun)
@@ -3443,28 +3514,56 @@ function gasPost_(action, body) {
       yearSelect = '<span class="text-xs font-bold text-gray-900">' + yr + '</span>';
     }
 
-    // Grid 12 bulan
-    var cells = MONTHS.map(function(name, i) {
-      var st = statuses[i];
-      var cls, dot, clickable = '';
-      if (st === 'confirmed') {
-        cls = 'bg-blue-50 border-blue-200 text-blue-700';
-        dot = '#3b82f6';
-        clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
-      } else if (st === 'pending') {
-        cls = 'bg-amber-50 border-amber-200 text-amber-700';
-        dot = '#F59E0B';
-        clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
-      } else {
-        cls = 'bg-gray-50 border-gray-100 text-gray-300';
-        dot = '#E5E7EB';
-      }
-      return '<div' + clickable + ' class="flex flex-col items-center justify-center gap-1 rounded-xl border py-2 ' +
-        cls + (clickable ? ' cursor-pointer active:scale-95 transition' : '') + '">' +
-        '<span class="w-1.5 h-1.5 rounded-full" style="background:' + dot + '"></span>' +
-        '<span class="text-[11px] font-semibold leading-none">' + name + '</span>' +
+    // Body: single blok = grid 12 bulan; multi blok = 1 baris per blok × 12 sel
+    var bodyHtml;
+    if (isMulti) {
+      bodyHtml = bloks.map(function(b) {
+        var rowCells = MONTHS.map(function(name, i) {
+          var st = blokStatus(b, i);
+          var cls, clickable = '';
+          if (st === 'confirmed') {
+            cls = 'bg-blue-50 border-blue-200 text-blue-700';
+            clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
+          } else if (st === 'pending') {
+            cls = 'bg-amber-50 border-amber-200 text-amber-700';
+            clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
+          } else {
+            cls = 'bg-gray-50 border-gray-100 text-gray-300';
+          }
+          return '<div' + clickable +
+            ' title="' + b + ' — ' + name + ' ' + yr + '"' +
+            ' class="h-6 rounded-md border flex items-center justify-center text-[9px] font-semibold leading-none ' +
+            cls + (clickable ? ' cursor-pointer active:scale-95 transition' : '') + '">' + name[0] + '</div>';
+        }).join('');
+        return '<div class="flex items-center gap-1.5 mb-1.5 last:mb-0">' +
+          '<span class="w-12 shrink-0 text-[11px] font-semibold text-gray-600">' + b + '</span>' +
+          '<div class="grid grid-cols-12 gap-1 flex-1">' + rowCells + '</div>' +
         '</div>';
-    }).join('');
+      }).join('');
+    } else {
+      var cells = MONTHS.map(function(name, i) {
+        var st = statuses[i];
+        var cls, dot, clickable = '';
+        if (st === 'confirmed') {
+          cls = 'bg-blue-50 border-blue-200 text-blue-700';
+          dot = '#3b82f6';
+          clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
+        } else if (st === 'pending') {
+          cls = 'bg-amber-50 border-amber-200 text-amber-700';
+          dot = '#F59E0B';
+          clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
+        } else {
+          cls = 'bg-gray-50 border-gray-100 text-gray-300';
+          dot = '#E5E7EB';
+        }
+        return '<div' + clickable + ' class="flex flex-col items-center justify-center gap-1 rounded-xl border py-2 ' +
+          cls + (clickable ? ' cursor-pointer active:scale-95 transition' : '') + '">' +
+          '<span class="w-1.5 h-1.5 rounded-full" style="background:' + dot + '"></span>' +
+          '<span class="text-[11px] font-semibold leading-none">' + name + '</span>' +
+          '</div>';
+      }).join('');
+      bodyHtml = '<div class="grid grid-cols-6 gap-1.5">' + cells + '</div>';
+    }
 
     box.innerHTML =
       '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">' +
@@ -3475,7 +3574,7 @@ function gasPost_(action, body) {
           '</div>' +
           '<span class="text-[11px] font-semibold text-blue-600">' + lunasCount + '/12 lunas</span>' +
         '</div>' +
-        '<div class="grid grid-cols-6 gap-1.5">' + cells + '</div>' +
+        bodyHtml +
         '<div class="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-gray-50">' +
           '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#3b82f6"></span>Lunas</span>' +
           '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#F59E0B"></span>Pending</span>' +
