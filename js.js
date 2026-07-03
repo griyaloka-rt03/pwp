@@ -506,18 +506,22 @@ function gasPost_(action, body) {
         renderSayaWargaData_(_wd);
       }
       if (_needRefetch && currentUser && currentUser.email) {
-        // Efek blur saat data warga sedang dimuat ulang
+        // Efek blur ringan saat data dimuat ulang — TANPA mengunci klik,
+        // supaya tombol "Ubah Data" tetap bisa ditekan selama refresh (GAS bisa lambat di HP)
         var _dwCard = document.getElementById('sayaDataWargaCard');
-        if (_dwCard) { _dwCard.style.filter = 'blur(3px)'; _dwCard.style.pointerEvents = 'none'; }
+        if (_dwCard) _dwCard.style.filter = 'blur(2px)';
         gasGet_('getCurrentUserDataWarga', { email: currentUser.email }).then(function(wRes) {
-          if (_dwCard) { _dwCard.style.filter = ''; _dwCard.style.pointerEvents = ''; }
+          if (_dwCard) _dwCard.style.filter = '';
           if (!currentUser) return;
           if (!wRes || !wRes.success || !wRes.data || !wRes.data.length) return;
           currentUser.wargaData = wRes.data;
           saveSession(currentUser);
-          renderSayaWargaData_(wRes.data);
+          // Jangan timpa isian kalau user sedang mode edit (tombol Simpan terlihat)
+          var _saveVisible = document.getElementById('sayaSaveBtn') &&
+            !document.getElementById('sayaSaveBtn').classList.contains('hidden');
+          if (!_saveVisible) renderSayaWargaData_(wRes.data);
         }).catch(function() {
-          if (_dwCard) { _dwCard.style.filter = ''; _dwCard.style.pointerEvents = ''; }
+          if (_dwCard) _dwCard.style.filter = '';
         });
       }
 
