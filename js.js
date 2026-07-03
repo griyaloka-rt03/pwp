@@ -4079,12 +4079,10 @@ function gasPost_(action, body) {
         _renderSayaWargaData_(wRes);
         setTimeout(function() { showToast('Anda telah login', 'success'); }, 300);
       });
-      // PIN default (123456) terdeteksi → paksa user buat PIN baru
+      // PIN default (123456) terdeteksi → modal buat PIN tampil DULUAN,
+      // menutupi menu (z-800) dan tidak bisa ditutup sampai PIN tersimpan
       if (_forcePinChange) {
-        setTimeout(function() {
-          showToast('Anda login dengan PIN default — wajib buat PIN baru sekarang', 'warning');
-          if (typeof openCreatePINModal === 'function') openCreatePINModal();
-        }, 900);
+        openCreatePINModal(true);
       }
       }, 600);
     }).catch(function() {
@@ -4219,16 +4217,41 @@ function gasPost_(action, body) {
       });
   }
 
-  function openCreatePINModal() {
+  // Mode paksa: modal tidak bisa ditutup sebelum PIN baru tersimpan (ForcePin)
+  var _pinForced_ = false;
+
+  function openCreatePINModal(forced) {
     var modal = document.getElementById('createPINModal');
     if (!modal) return;
+    _pinForced_ = !!forced;
     document.getElementById('createPINInput').value = '';
     document.getElementById('createPINConfirm').value = '';
     document.getElementById('createPINError').classList.add('hidden');
+    var closeBtn = document.getElementById('createPINCloseBtn');
+    var titleEl  = document.getElementById('createPINTitle');
+    var descEl   = document.getElementById('createPINDesc');
+    if (closeBtn) closeBtn.classList.toggle('hidden', _pinForced_);
+    if (titleEl)  titleEl.innerText = _pinForced_ ? 'Buat PIN Baru' : 'Buat / Ubah PIN';
+    if (descEl)   descEl.innerText = _pinForced_
+      ? 'Anda login dengan PIN default. Demi keamanan, buat PIN baru 6 digit sekarang — langkah ini wajib sebelum melanjutkan.'
+      : 'PIN digunakan untuk login lebih cepat tanpa OTP. Gunakan 6 digit angka yang mudah diingat.';
     modal.classList.remove('hidden');
+    var inp = document.getElementById('createPINInput');
+    if (inp) setTimeout(function() { inp.focus(); }, 150);
   }
 
   function closeCreatePINModal() {
+    if (_pinForced_) {
+      // Wajib buat PIN dulu — goyang modal sebagai feedback
+      var card = document.querySelector('#createPINModal > div');
+      if (card) {
+        card.classList.remove('shake');
+        void card.offsetWidth;
+        card.classList.add('shake');
+      }
+      if (navigator.vibrate) navigator.vibrate(30);
+      return;
+    }
     var modal = document.getElementById('createPINModal');
     if (modal) modal.classList.add('hidden');
   }
@@ -4257,6 +4280,7 @@ function gasPost_(action, body) {
         errorEl.innerText = res && res.message ? res.message : 'Gagal menyimpan PIN';
         errorEl.classList.remove('hidden'); return;
       }
+      _pinForced_ = false; // rilis mode paksa — PIN baru sudah tersimpan
       closeCreatePINModal();
       showToast('PIN berhasil disimpan 🔐', 'success');
     }).catch(function() {
