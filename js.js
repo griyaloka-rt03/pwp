@@ -3514,6 +3514,13 @@ function gasPost_(action, body) {
       yearSelect = '<span class="text-xs font-bold text-gray-900">' + yr + '</span>';
     }
 
+    // Bulan belum bayar yang sudah lewat jatuh tempo (tgl 5 bulan berikutnya) = Tunggakan (merah)
+    var _now = new Date();
+    var _curY = _now.getFullYear(), _curM = _now.getMonth(), _curD = _now.getDate();
+    function isOverdueMonth(m) {
+      return yrInt < _curY || (yrInt === _curY && (m + 1 < _curM || (m + 1 === _curM && _curD > 5)));
+    }
+
     // Body: single blok = grid 12 bulan; multi blok = 1 baris per blok × 12 sel
     var bodyHtml;
     if (isMulti) {
@@ -3527,6 +3534,8 @@ function gasPost_(action, body) {
           } else if (st === 'pending') {
             cls = 'bg-amber-50 border-amber-200 text-amber-700';
             clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
+          } else if (isOverdueMonth(i)) {
+            cls = 'bg-rose-50 border-rose-200 text-rose-600';
           } else {
             cls = 'bg-gray-50 border-gray-100 text-gray-300';
           }
@@ -3552,6 +3561,9 @@ function gasPost_(action, body) {
           cls = 'bg-amber-50 border-amber-200 text-amber-700';
           dot = '#F59E0B';
           clickable = ' onclick="wargaJumpMonth(\'' + name + '\',\'' + yr + '\')"';
+        } else if (isOverdueMonth(i)) {
+          cls = 'bg-rose-50 border-rose-200 text-rose-600';
+          dot = '#F43F5E';
         } else {
           cls = 'bg-gray-50 border-gray-100 text-gray-300';
           dot = '#E5E7EB';
@@ -3578,7 +3590,8 @@ function gasPost_(action, body) {
         '<div class="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-gray-50">' +
           '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#3b82f6"></span>Lunas</span>' +
           '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#F59E0B"></span>Pending</span>' +
-          '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#E5E7EB"></span>Belum bayar</span>' +
+          '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#F43F5E"></span>Tunggakan</span>' +
+          '<span class="flex items-center gap-1 text-[10px] text-gray-500"><span class="w-1.5 h-1.5 rounded-full" style="background:#E5E7EB"></span>Belum jatuh tempo</span>' +
         '</div>' +
       '</div>';
     box.classList.remove('hidden');
