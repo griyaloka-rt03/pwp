@@ -16201,120 +16201,147 @@ function _renderJagaAdminTable_() {
   });
 }
 
+// Warna sel per shift (index) — inisial shift dipakai sebagai label (P/S/M)
+var _JAGA_CELL_STYLES_ = [
+  'bg-amber-100 border-amber-300 text-amber-800',    // shift 1 (Pagi)
+  'bg-sky-100 border-sky-300 text-sky-800',          // shift 2 (Siang, jika ada)
+  'bg-indigo-100 border-indigo-300 text-indigo-800'  // shift terakhir (Malam)
+];
+var _JAGA_CELL_OFF_ = 'bg-gray-50 border-gray-200 text-gray-300';
+
 function _renderJagaAdminTableContent_(monday, securityList, entries) {
   var table = document.getElementById('jagaAdminTable');
   if (!table) return;
 
-  var dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis',"Jum'at",'Sabtu'];
+  var dayShort = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
   var shifts = (_jagaShiftConfig_ || []).map(function(s) { return s.name; });
-  if (!shifts.length) shifts = ['Pagi','Siang','Malam'];
+  if (!shifts.length) shifts = ['Pagi','Malam'];
 
-  // Map: 'yyyy-MM-dd|Shift' -> array entries
-  var entryMap = {};
+  // Map: 'nama|yyyy-MM-dd' -> entry (satu orang satu shift per hari, ala roster kertas)
+  var byPersonDay = {};
   entries.forEach(function(e) {
-    var k = e.tanggal + '|' + e.shift;
-    if (!entryMap[k]) entryMap[k] = [];
-    entryMap[k].push(e);
+    var k = String(e.nama || '').toLowerCase() + '|' + e.tanggal;
+    if (!byPersonDay[k]) byPersonDay[k] = e;
   });
 
-  var addOptions = '<option value="">+ Tambah personil</option>' + securityList.map(function(s) {
-    return '<option value="' + _escHtml_(s.nama) + '|' + _escHtml_(s.noHp) + '">' + _escHtml_(s.nama) + '</option>';
-  }).join('');
-
-  var html = '';
+  var days = [];
   for (var i = 0; i < 7; i++) {
     var d = new Date(monday);
     d.setDate(d.getDate() + i);
-    var key = _jagaFmtDate_(d);
-    var dateLabel = dayNames[d.getDay()] + ', ' + d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-
-    html += '<div class="bg-gray-50 rounded-2xl px-4 py-3">';
-    html += '<p class="text-sm font-semibold text-gray-900 mb-2">' + dateLabel + '</p>';
-    html += '<div class="grid gap-2" style="grid-template-columns:repeat(' + shifts.length + ',1fr)">';
-    shifts.forEach(function(shift) {
-      var cellEntries = entryMap[key + '|' + shift] || [];
-      html += '<div>';
-      html += '<label class="text-[10px] font-semibold text-gray-400 block mb-1">' + _escHtml_(shift) + '</label>';
-      html += '<div class="space-y-1 mb-1">';
-      cellEntries.forEach(function(e) {
-        html += '<div class="flex items-center justify-between gap-1 bg-white border border-gray-200 rounded-lg px-1.5 py-1">' +
-          '<span class="text-[11px] text-gray-700 truncate">' + _escHtml_(e.nama || '') + '</span>' +
-          '<button onclick="_jagaAdminDeleteEntry_(this, \'' + e.id + '\')" class="text-gray-300 active:text-red-500 flex-shrink-0">' +
-            '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>' +
-          '</button>' +
-        '</div>';
-      });
-      html += '</div>';
-      html += '<select onchange="_jagaAdminAddCell_(this, \'' + key + '\', \'' + _escHtml_(shift) + '\')" class="w-full text-[11px] border border-gray-200 rounded-lg px-1.5 py-1 bg-white">';
-      html += addOptions;
-      html += '</select>';
-      html += '</div>';
-    });
-    html += '</div>';
-    html += '</div>';
+    days.push({ key: _jagaFmtDate_(d), label: dayShort[d.getDay()], date: d.getDate() });
   }
+
+  if (!securityList.length) {
+    table.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Belum ada kontak security. Tambahkan dulu di tab Contact (kategori Security).</p>';
+    return;
+  }
+
+  // Matrix ala roster kertas: baris = personil, kolom = hari, tap sel = ganti shift
+  var html = '<div class="overflow-x-auto"><table class="w-full border-separate" style="border-spacing:4px;min-width:560px">';
+  html += '<thead><tr><th class="text-left text-[11px] font-bold text-gray-400 uppercase px-1">Nama</th>';
+  days.forEach(function(day) {
+    html += '<th class="text-center"><span class="block text-[10px] font-semibold text-gray-400">' + day.label + '</span>' +
+            '<span class="block text-xs font-bold text-gray-700">' + day.date + '</span></th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  securityList.forEach(function(s, pi) {
+    html += '<tr>';
+    html += '<td class="text-sm font-semibold text-gray-800 whitespace-nowrap pr-2">' + _escHtml_(s.nama) + '</td>';
+    days.forEach(function(day) {
+      var entry = byPersonDay[String(s.nama).toLowerCase() + '|' + day.key];
+      var shiftIdx = entry ? shifts.indexOf(entry.shift) : -1;
+      var isOff = shiftIdx === -1;
+      var cls, labelTxt;
+      if (isOff) { cls = _JAGA_CELL_OFF_; labelTxt = 'OFF'; }
+      else {
+        var styleIdx = (shiftIdx === shifts.length - 1) ? 2 : Math.min(shiftIdx, 1);
+        cls = _JAGA_CELL_STYLES_[styleIdx];
+        labelTxt = String(shifts[shiftIdx]).charAt(0).toUpperCase();
+      }
+      html += '<td class="text-center">' +
+        '<button onclick="_jagaAdminCycleCell_(' + pi + ', \'' + day.key + '\')" ' +
+          'title="' + _escHtml_(s.nama) + ' — ' + day.key + (isOff ? ': Libur' : ': ' + _escHtml_(shifts[shiftIdx])) + '"' +
+          ' class="w-full min-w-[44px] h-10 rounded-xl border text-xs font-bold ' + cls + ' active:scale-95 transition">' +
+          labelTxt +
+        '</button></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Legend dinamis dari shift config
+  html += '<div class="flex flex-wrap items-center gap-3 mt-3 px-1">';
+  shifts.forEach(function(sh, si) {
+    var styleIdx = (si === shifts.length - 1) ? 2 : Math.min(si, 1);
+    html += '<span class="flex items-center gap-1.5 text-[11px] text-gray-500">' +
+      '<span class="w-5 h-5 rounded-md border text-[10px] font-bold flex items-center justify-center ' + _JAGA_CELL_STYLES_[styleIdx] + '">' +
+      String(sh).charAt(0).toUpperCase() + '</span>' + _escHtml_(sh) + '</span>';
+  });
+  html += '<span class="flex items-center gap-1.5 text-[11px] text-gray-500">' +
+    '<span class="w-5 h-5 rounded-md border text-[9px] font-bold flex items-center justify-center ' + _JAGA_CELL_OFF_ + '">OFF</span>Libur</span>';
+  html += '<span class="text-[11px] text-gray-400 ml-auto">Tap sel untuk ganti shift</span>';
+  html += '</div>';
 
   table.innerHTML = html;
 }
 
-function _jagaAdminAddCell_(selectEl, tanggal, shift) {
-  var val = selectEl.value;
-  if (!val) return;
-  var parts = val.split('|');
-  var nama = parts[0];
-  var noHp = parts[1] || '';
+// Tap sel → cycle: OFF → shift1 → shift2 → ... → OFF
+function _jagaAdminCycleCell_(personIdx, tanggal) {
+  var s = _jagaAdminLastSecurityList_[personIdx];
+  if (!s) return;
+  var shifts = (_jagaShiftConfig_ || []).map(function(c) { return c.name; });
+  if (!shifts.length) shifts = ['Pagi','Malam'];
 
-  var tempId = '_tmp_' + Date.now() + '_' + Math.random().toString(36).slice(-4);
-  var optimisticEntry = { id: tempId, tanggal: tanggal, shift: shift, nama: nama, noHp: noHp };
-  _jagaAdminLastEntries_.push(optimisticEntry);
-  _renderJagaAdminTableContent_(_jagaAdminLastMonday_, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
-
-  gasPost_('adminAddJadwalSecurity', {
-    payload: { tanggal: tanggal, shift: shift, nama: nama, noHp: noHp },
-    adminEmail: (currentUser && currentUser.email) || ''
-  }).then(function(res) {
-    if (!res || !res.ok) {
-      var idx = _jagaAdminLastEntries_.indexOf(optimisticEntry);
-      if (idx >= 0) _jagaAdminLastEntries_.splice(idx, 1);
-      _renderJagaAdminTableContent_(_jagaAdminLastMonday_, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
-      showToast('Gagal menyimpan jadwal: ' + ((res && res.error) || 'unknown error'), 'error');
-      return;
-    }
-    if (res.id) optimisticEntry.id = res.id;
-    showToast('Personil ditambahkan', 'success');
-    _jagaCache_ = {}; // invalidate cache halaman warga
-  }).catch(function() {
-    var idx = _jagaAdminLastEntries_.indexOf(optimisticEntry);
-    if (idx >= 0) _jagaAdminLastEntries_.splice(idx, 1);
-    _renderJagaAdminTableContent_(_jagaAdminLastMonday_, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
-    showToast('Gagal menyimpan jadwal', 'error');
-  });
-}
-
-function _jagaAdminDeleteEntry_(btnEl, id) {
-  var idx = -1;
+  // Entry existing utk orang+hari ini
+  var existing = null;
   for (var i = 0; i < _jagaAdminLastEntries_.length; i++) {
-    if (_jagaAdminLastEntries_[i].id === id) { idx = i; break; }
+    var e = _jagaAdminLastEntries_[i];
+    if (e.tanggal === tanggal && String(e.nama || '').toLowerCase() === String(s.nama).toLowerCase()) { existing = e; break; }
   }
-  var removed = idx >= 0 ? _jagaAdminLastEntries_.splice(idx, 1)[0] : null;
+  var curIdx = existing ? shifts.indexOf(existing.shift) : -1;
+  var nextIdx = curIdx + 1 >= shifts.length ? -1 : curIdx + 1; // setelah shift terakhir → OFF
+  var nextShift = nextIdx === -1 ? null : shifts[nextIdx];
+
+  // Optimistic update lokal
+  if (existing) {
+    _jagaAdminLastEntries_.splice(_jagaAdminLastEntries_.indexOf(existing), 1);
+  }
+  var optimistic = null;
+  if (nextShift) {
+    optimistic = { id: '_tmp_' + Date.now(), tanggal: tanggal, shift: nextShift, nama: s.nama, noHp: s.noHp || '' };
+    _jagaAdminLastEntries_.push(optimistic);
+  }
   _renderJagaAdminTableContent_(_jagaAdminLastMonday_, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
 
-  gasPost_('adminDeleteJadwalSecurity', {
-    id: id,
-    adminEmail: (currentUser && currentUser.email) || ''
-  }).then(function(res) {
-    if (!res || !res.ok) {
-      if (removed) _jagaAdminLastEntries_.splice(idx, 0, removed);
-      _renderJagaAdminTableContent_(_jagaAdminLastMonday_, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
-      showToast('Gagal menghapus personil: ' + ((res && res.error) || 'unknown error'), 'error');
+  // Sinkron ke server: hapus entry lama (jika ada), lalu tambah yang baru (jika bukan OFF)
+  var adminEmail = (currentUser && currentUser.email) || '';
+  var chain = Promise.resolve({ ok: true });
+  if (existing && String(existing.id).indexOf('_tmp_') !== 0) {
+    chain = chain.then(function() { return gasPost_('adminDeleteJadwalSecurity', { id: existing.id, adminEmail: adminEmail }); });
+  }
+  if (nextShift) {
+    chain = chain.then(function(prev) {
+      if (prev && prev.ok === false) return prev;
+      return gasPost_('adminAddJadwalSecurity', {
+        payload: { tanggal: tanggal, shift: nextShift, nama: s.nama, noHp: s.noHp || '' },
+        adminEmail: adminEmail
+      }).then(function(res) {
+        if (res && res.ok && res.id && optimistic) optimistic.id = res.id;
+        return res;
+      });
+    });
+  }
+  chain.then(function(res) {
+    if (!res || res.ok === false) {
+      showToast('Gagal menyimpan — memuat ulang…', 'error');
+      _renderJagaAdminTable_(); // re-sync dari server
       return;
     }
-    showToast('Personil dihapus', 'success');
     _jagaCache_ = {}; // invalidate cache halaman warga
   }).catch(function() {
-    if (removed) _jagaAdminLastEntries_.splice(idx, 0, removed);
-    _renderJagaAdminTableContent_(_jagaAdminLastMonday_, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
-    showToast('Gagal menghapus personil', 'error');
+    showToast('Gagal menyimpan — memuat ulang…', 'error');
+    _renderJagaAdminTable_();
   });
 }
 
