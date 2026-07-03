@@ -487,8 +487,12 @@ function gasPost_(action, body) {
         if (alamatEl)  alamatEl.value = data[0].alamat || '';
         var mobilEl = document.getElementById('sayaJmlMobil');
         var motorEl = document.getElementById('sayaJmlMotor');
-        if (mobilEl) mobilEl.value = data[0].jmlMobil || 0;
-        if (motorEl) motorEl.value = data[0].jmlMotor || 0;
+        // Multi-blok: kendaraan dijumlah dari semua blok ('-' dihitung 0)
+        var sumV = function(key) {
+          return data.reduce(function(s, d) { return s + (Number(d[key]) || 0); }, 0);
+        };
+        if (mobilEl) mobilEl.value = sumV('jmlMobil');
+        if (motorEl) motorEl.value = sumV('jmlMotor');
         if (badgeEl && data.length) {
           badgeEl.innerText = 'Blok ' + data.map(function(d){ return d.blok; }).join(', ');
         }
@@ -502,12 +506,18 @@ function gasPost_(action, body) {
         renderSayaWargaData_(_wd);
       }
       if (_needRefetch && currentUser && currentUser.email) {
+        // Efek blur saat data warga sedang dimuat ulang
+        var _dwCard = document.getElementById('sayaDataWargaCard');
+        if (_dwCard) { _dwCard.style.filter = 'blur(3px)'; _dwCard.style.pointerEvents = 'none'; }
         gasGet_('getCurrentUserDataWarga', { email: currentUser.email }).then(function(wRes) {
+          if (_dwCard) { _dwCard.style.filter = ''; _dwCard.style.pointerEvents = ''; }
           if (!currentUser) return;
           if (!wRes || !wRes.success || !wRes.data || !wRes.data.length) return;
           currentUser.wargaData = wRes.data;
           saveSession(currentUser);
           renderSayaWargaData_(wRes.data);
+        }).catch(function() {
+          if (_dwCard) { _dwCard.style.filter = ''; _dwCard.style.pointerEvents = ''; }
         });
       }
 
@@ -3541,12 +3551,12 @@ function gasPost_(action, body) {
           }
           return '<div' + clickable +
             ' title="' + b + ' — ' + name + ' ' + yr + '"' +
-            ' class="h-6 rounded-md border flex items-center justify-center text-[9px] font-semibold leading-none ' +
-            cls + (clickable ? ' cursor-pointer active:scale-95 transition' : '') + '">' + name[0] + '</div>';
+            ' class="h-7 rounded-lg border flex items-center justify-center text-[10px] font-semibold leading-none ' +
+            cls + (clickable ? ' cursor-pointer active:scale-95 transition' : '') + '">' + name + '</div>';
         }).join('');
-        return '<div class="flex items-center gap-1.5 mb-1.5 last:mb-0">' +
-          '<span class="w-12 shrink-0 text-[11px] font-semibold text-gray-600">' + b + '</span>' +
-          '<div class="grid grid-cols-12 gap-1 flex-1">' + rowCells + '</div>' +
+        return '<div class="flex items-start gap-1.5 mb-2 last:mb-0">' +
+          '<span class="w-12 shrink-0 text-[11px] font-semibold text-gray-600 pt-1.5">' + b + '</span>' +
+          '<div class="grid grid-cols-6 gap-1 flex-1">' + rowCells + '</div>' +
         '</div>';
       }).join('');
     } else {
@@ -4036,6 +4046,7 @@ function gasPost_(action, body) {
       // Login berhasil — animasi sukses (merge → centang), tunda navigasi agar terlihat
       _setCodeState_(document.getElementById('sayaPINBoxes'), 'success');
       if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      var _forcePinChange = !!res.forcePinChange;
       setTimeout(function() {
       currentUser = res.user;
       saveSession(res.user);
@@ -4068,6 +4079,13 @@ function gasPost_(action, body) {
         _renderSayaWargaData_(wRes);
         setTimeout(function() { showToast('Anda telah login', 'success'); }, 300);
       });
+      // PIN default (123456) terdeteksi → paksa user buat PIN baru
+      if (_forcePinChange) {
+        setTimeout(function() {
+          showToast('Anda login dengan PIN default — wajib buat PIN baru sekarang', 'warning');
+          if (typeof openCreatePINModal === 'function') openCreatePINModal();
+        }, 900);
+      }
       }, 600);
     }).catch(function() {
       btn.disabled = false;
