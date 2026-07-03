@@ -7119,6 +7119,13 @@ function loadHomeFasum() {
     return;
   }
 
+  if (!homeDataCache.fasum) {
+    el.innerHTML =
+      '<div class="h-24 rounded-2xl bg-gray-100 animate-pulse"></div>' +
+      '<div class="h-24 rounded-2xl bg-gray-100 animate-pulse" style="animation-delay:.15s"></div>' +
+      '<div class="h-24 rounded-2xl bg-gray-100 animate-pulse" style="animation-delay:.3s"></div>';
+  }
+
   gasGet_('getFasumData')
     .then(function(res) {
       homeDataCache.fasum = res;
@@ -7555,7 +7562,12 @@ function openContactModal() {
     return;
   }
 
-  listEl.innerHTML = '<div class="h-16 rounded-2xl bg-gray-100 animate-pulse"></div>';
+  listEl.innerHTML =
+    '<div class="space-y-2">' +
+      '<div class="h-16 rounded-2xl bg-gray-100 animate-pulse"></div>' +
+      '<div class="h-16 rounded-2xl bg-gray-100 animate-pulse" style="animation-delay:.15s"></div>' +
+      '<div class="h-16 rounded-2xl bg-gray-100 animate-pulse" style="animation-delay:.3s"></div>' +
+    '</div>';
 
   // AMBIL DATA SELAIN SECURITY
   gasGet_('getNonSecurityContacts')
@@ -7650,10 +7662,15 @@ function loadSecurityContacts() {
   var listEl = document.getElementById('securityContactList');
   if (!listEl) return;
 
-  // Gunakan cache jika sudah ada — render langsung TANPA spinner (anti "loading terus")
+  // Gunakan cache jika sudah ada — render KONTAK LANGSUNG (tanpa nunggu status jaga),
+  // badge "Sedang Berjaga" menyusul saat datanya masuk. Sebelumnya list dibiarkan
+  // kosong selama nunggu getJadwalJaga → terlihat blank tanpa indikator.
   if (homeDataCache.security) {
+    renderSecurityContactList(homeDataCache.security, listEl, new Set());
     _jagaLoadOnDutyNow_().then(function(onDutySet) {
-      renderSecurityContactList(homeDataCache.security, listEl, onDutySet);
+      if (onDutySet && onDutySet.size) {
+        renderSecurityContactList(homeDataCache.security, listEl, onDutySet);
+      }
     });
     return;
   }
@@ -16714,6 +16731,11 @@ function _pedomanAttr_(s){ return String(s==null?'':s).replace(/&/g,'&amp;').rep
 function loadPedoman() {
   var box = document.getElementById('pedomanList');
   if (!box) return;
+  box.innerHTML =
+    '<div class="px-4 py-3 space-y-2">' +
+      '<div class="h-10 rounded-xl bg-gray-100 animate-pulse"></div>' +
+      '<div class="h-10 rounded-xl bg-gray-100 animate-pulse" style="animation-delay:.15s"></div>' +
+    '</div>';
   return gasGet_('getPedoman').then(function(res){
     if (!res || !res.ok || !res.items || !res.items.length) {
       box.innerHTML = '<p class="px-4 py-4 text-xs text-gray-400">Belum ada dokumen.</p>';
