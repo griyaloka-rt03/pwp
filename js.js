@@ -5199,8 +5199,9 @@ function gasPost_(action, body) {
     const emailEl = document.getElementById('sayaEmailEditInput');
     const btn     = document.getElementById('sayaSaveBtn');
 
+    // Semua blok milik user — ganti No HP/Nama berlaku ke seluruh bloknya
     var _wdBlok = (currentUser && currentUser.wargaData && currentUser.wargaData.length)
-      ? (currentUser.wargaData[0].blok || '') : '';
+      ? currentUser.wargaData.map(function(d){ return d.blok; }).filter(Boolean).join(',') : '';
     const payload = {
       email: currentUser ? currentUser.email : '',
       blok: _wdBlok,
