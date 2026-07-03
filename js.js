@@ -1129,7 +1129,10 @@ function gasPost_(action, body) {
         clearBlokError();
         blokInput.value = blokInput.value
           .toUpperCase()
-          .replace(/[^A-Z0-9,-]/g, ''); // izinkan '-' (format Griya C4-3)
+          .replace(/[\s._]+/g, '-')       // toleran: "d2 14" / "d2_14" / "d2.14" → "D2-14"
+          .replace(/[^A-Z0-9,-]/g, '')    // izinkan '-' (format Griya C4-3)
+          .replace(/-{2,}/g, '-')         // "d2 - 14" → "D2-14"
+          .replace(/,-+/g, ',');          // spasi setelah koma jangan jadi '-'
 
         isLookupLocked = false;
         multiDecisionMode = null;
@@ -1386,9 +1389,9 @@ function gasPost_(action, body) {
         var paid = (paidBB[b] && paidBB[b][yr]) ? paidBB[b][yr] : [];
         var pend = (window._pendingByBlok_ && window._pendingByBlok_[b] && window._pendingByBlok_[b][yr])
                    ? window._pendingByBlok_[b][yr] : [];
-        html += '<div class="flex items-center gap-1.5">';
-        html += '<span class="w-12 shrink-0 text-[11px] font-semibold text-gray-600">' + b + '</span>';
-        html += '<div class="grid grid-cols-12 gap-1 flex-1">';
+        html += '<div class="flex items-start gap-1.5">';
+        html += '<span class="w-12 shrink-0 text-[11px] font-semibold text-gray-600 pt-1.5">' + b + '</span>';
+        html += '<div class="grid grid-cols-6 gap-1 flex-1">';
         for (var m = 0; m < 12; m++) {
           var cls, title = b + ' — ' + MON[m] + ' ' + yr + ': ';
           if (paid.indexOf(m) !== -1) {
@@ -1402,8 +1405,8 @@ function gasPost_(action, body) {
             else         { cls = 'bg-gray-50 border-gray-200 text-gray-400';  title += 'Belum jatuh tempo'; }
           }
           html += '<span title="' + title + '" aria-label="' + title + '"' +
-                  ' class="h-6 rounded border text-[9px] leading-none flex items-center justify-center ' + cls + '">' +
-                  MON[m][0] + '</span>';
+                  ' class="h-7 rounded-lg border text-[10px] font-semibold leading-none flex items-center justify-center ' + cls + '">' +
+                  MON[m] + '</span>';
         }
         html += '</div></div>';
       });
