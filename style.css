@@ -1407,6 +1407,9 @@ html, body {
     #dashboard,
     #pageSaya,
     #laporPage,
+    #jualanPage,
+    #jadwalJagaPage,
+    #pedomanViewer,
     #explorePage {
       position: fixed !important;
       left: 230px !important;
@@ -1436,6 +1439,8 @@ html, body {
     #dashboard .flex-1,
     #pageSaya .flex-1,
     #laporPage .flex-1,
+    #jualanPage .flex-1,
+    #jadwalJagaPage .flex-1,
     #explorePage .flex-1,
     #formMudik .flex-1,
     #formRenovasi .flex-1,
@@ -2290,6 +2295,22 @@ body.dark .summary-stat-card:hover { box-shadow: 0 10px 24px -8px rgba(0,0,0,0.5
 .admin-tab-action:hover { background: #bfdbfe; color: #1e3a8a; }
 body.dark .admin-tab-action { background: #172554; color: #60a5fa; border-color: #1e3a8a; }
 body.dark .admin-tab-action:hover { background: #1e3a8a; }
+
+/* Desktop: jangan sebar tombol aksi ke ujung — rapatkan dgn tab lain,
+   cukup beri jeda kecil sebagai pemisah (mobile tetap margin-left:auto) */
+@media (min-width: 768px) {
+  #adminTabNav .admin-tab-action { margin-left: 0 !important; }
+  #adminTabNav .admin-tab-action[data-tab="verifikasi"] { margin-left: 12px !important; }
+
+  /* Bottom-sheet modal → pusatkan di tengah layar pada desktop */
+  .fixed.inset-0.items-end { align-items: center !important; }
+  .fixed.inset-0.items-end > .rounded-t-3xl,
+  .fixed.inset-0.items-end > div > .rounded-t-3xl {
+    border-radius: 1.5rem !important;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+}
 
 /* ════════════════════════════════════════════════════════════
    Dashboard Verifikasi — tampil inline di tab admin (bukan full page)
