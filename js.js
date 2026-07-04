@@ -10453,7 +10453,8 @@ function _renderSaldoKasCard_(){
   }
   var anyYear = Object.keys(_kasReportCache)[0];
   if(anyYear){ _applySaldoCard_(_kasReportCache[anyYear]); return; }
-  mini.textContent = 'memuat…';
+  // Skeleton shimmer — samakan dengan loading total tagihan (tanpa teks)
+  mini.innerHTML = '<span class="inline-block h-6 w-24 rounded-lg bg-white/20 animate-pulse align-middle"></span>';
   _loadKasReportShared_().then(function(res){
     if(res && res.ok) _applySaldoCard_(res);
     else mini.textContent = '—';
