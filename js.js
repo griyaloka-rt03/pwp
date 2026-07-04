@@ -16459,6 +16459,36 @@ function _jagaAdminAutoGenerate_() {
   }, function() { _jagaDoAutoGenerate_(guards, shifts); });
 }
 
+function _jagaAdminClearWeek_() {
+  var monday = _jagaAdminLastMonday_ || _jagaGetMonday_(new Date());
+  var sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+  _pwpConfirm_({
+    title: 'Kosongkan Jadwal Minggu Ini?',
+    message: 'Semua jadwal security minggu ini akan dihapus. Tindakan ini tidak bisa dibatalkan.',
+    okText: 'Kosongkan',
+    cancelText: 'Batal',
+    danger: true
+  }, function() {
+    // Optimistic: kosongkan tampilan
+    _jagaAdminLastEntries_ = [];
+    _renderJagaAdminTableContent_(monday, _jagaAdminLastSecurityList_, []);
+    showToast('Mengosongkan…', 'info');
+    gasPost_('adminBulkSetJadwalSecurity', {
+      startDate: _jagaFmtDate_(monday),
+      endDate: _jagaFmtDate_(sunday),
+      entries: [],
+      adminEmail: (currentUser && currentUser.email) || ''
+    }).then(function(res) {
+      if (!res || !res.ok) { showToast('Gagal mengosongkan — memuat ulang…', 'error'); _renderJagaAdminTable_(); return; }
+      _jagaCache_ = {};
+      showToast('Jadwal minggu ini dikosongkan', 'success');
+    }).catch(function() {
+      showToast('Gagal mengosongkan — memuat ulang…', 'error');
+      _renderJagaAdminTable_();
+    });
+  });
+}
+
 function _jagaDoAutoGenerate_(guards, shifts) {
   var monday = _jagaAdminLastMonday_ || _jagaGetMonday_(new Date());
   var sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
