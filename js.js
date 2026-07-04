@@ -16391,14 +16391,46 @@ function _jagaBuildFairRoster_(guards, monday, shifts) {
   return entries;
 }
 
+// Dialog konfirmasi in-app (pengganti confirm() native yang lambat & di luar frame)
+function _pwpConfirm_(opts, onOk) {
+  opts = opts || {};
+  var old = document.getElementById('_pwpConfirmOverlay_');
+  if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = '_pwpConfirmOverlay_';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .15s';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:20px;max-width:340px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);transform:scale(.96);transition:transform .15s" onclick="event.stopPropagation()">' +
+      '<div style="padding:20px 20px 8px"><p style="font-size:16px;font-weight:700;color:#111827;margin:0">' + _escHtml_(opts.title || 'Konfirmasi') + '</p>' +
+        '<p style="font-size:13px;color:#6b7280;margin:8px 0 0;line-height:1.5">' + _escHtml_(opts.message || '') + '</p></div>' +
+      '<div style="display:flex;gap:8px;padding:16px 20px 20px">' +
+        '<button id="_pwpConfirmCancel_" style="flex:1;padding:10px;border-radius:12px;background:#f3f4f6;color:#4b5563;font-size:13px;font-weight:600;border:0">' + _escHtml_(opts.cancelText || 'Batal') + '</button>' +
+        '<button id="_pwpConfirmOk_" style="flex:1;padding:10px;border-radius:12px;background:' + (opts.danger ? '#dc2626' : '#2563eb') + ';color:#fff;font-size:13px;font-weight:600;border:0">' + _escHtml_(opts.okText || 'Ya') + '</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(ov);
+  requestAnimationFrame(function() { ov.style.opacity = '1'; ov.firstChild.style.transform = 'scale(1)'; });
+  var close = function() { ov.style.opacity = '0'; setTimeout(function() { ov.remove(); }, 150); };
+  ov.addEventListener('click', close);
+  ov.querySelector('#_pwpConfirmCancel_').addEventListener('click', close);
+  ov.querySelector('#_pwpConfirmOk_').addEventListener('click', function() { close(); if (onOk) onOk(); });
+}
+
 function _jagaAdminAutoGenerate_() {
   var guards = _jagaAdminLastSecurityList_ || [];
   if (!guards.length) { showToast('Belum ada personil security', 'error'); return; }
   var shifts = (_jagaShiftConfig_ || []).map(function(c) { return c.name; });
   if (!shifts.length) shifts = ['Pagi', 'Malam'];
 
-  if (!confirm('Buat ulang jadwal minggu ini secara otomatis?\nJadwal manual minggu ini akan ditimpa.')) return;
+  _pwpConfirm_({
+    title: 'Buat Jadwal Otomatis?',
+    message: 'Jadwal security minggu ini akan dibuat ulang secara adil (pola 5-1). Jadwal manual minggu ini akan ditimpa.',
+    okText: 'Buat Jadwal',
+    cancelText: 'Batal'
+  }, function() { _jagaDoAutoGenerate_(guards, shifts); });
+}
 
+function _jagaDoAutoGenerate_(guards, shifts) {
   var monday = _jagaAdminLastMonday_ || _jagaGetMonday_(new Date());
   var sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
   var entries = _jagaBuildFairRoster_(guards, monday, shifts);
