@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "pwp-griyaloka-rt03",
+  "name": "pwp",
   "compatibility_date": "2026-04-03",
   "observability": {
     "enabled": true
