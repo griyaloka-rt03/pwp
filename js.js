@@ -16184,15 +16184,25 @@ function _renderJagaAdminTable_(silent) {
     label.textContent = fmt(monday) + ' - ' + fmt(sunday);
   }
 
-  // silent = jangan kosongkan tabel (hindari kedip "blank" saat refresh latar);
-  // biarkan tampilan lama sampai data baru siap
-  if (!silent) table.innerHTML = _jagaSpinnerHTML_('Memuat jadwal…');
-
   var _sortByNama_ = function(list) {
     return (list || []).slice().sort(function(a, b) {
       return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
     });
   };
+
+  // CACHE-FIRST: jika minggu ini sudah pernah dimuat, render instan dari cache
+  // lalu refresh diam-diam di latar. Pindah minggu = tanpa loading.
+  var cachedEntries = _jagaAdminDataCache_[startDate];
+  if (cachedEntries && _jagaAdminSecurityList_) {
+    _jagaAdminLastMonday_ = monday;
+    _jagaAdminLastSecurityList_ = _sortByNama_(_jagaAdminSecurityList_);
+    _jagaAdminLastEntries_ = cachedEntries.slice();
+    _renderJagaAdminTableContent_(monday, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
+    silent = true; // sudah ada tampilan → refresh latar tak boleh mengosongkan
+  } else if (!silent) {
+    table.innerHTML = _jagaSpinnerHTML_('Memuat jadwal…');
+  }
+
   var loadSecurity = _jagaAdminSecurityList_
     ? Promise.resolve(_jagaAdminSecurityList_)
     : gasGet_('getSecurityContacts').then(function(res) {
@@ -16210,11 +16220,12 @@ function _renderJagaAdminTable_(silent) {
 
   Promise.all([loadSecurity, loadEntries]).then(function(results) {
     _jagaAdminLastMonday_ = monday;
-    _jagaAdminLastSecurityList_ = results[0];
+    _jagaAdminLastSecurityList_ = _sortByNama_(results[0]);
     _jagaAdminLastEntries_ = results[1];
-    _renderJagaAdminTableContent_(monday, results[0], results[1]);
+    _jagaAdminDataCache_[startDate] = results[1].slice(); // simpan ke cache per minggu
+    _renderJagaAdminTableContent_(monday, _jagaAdminLastSecurityList_, results[1]);
   }).catch(function() {
-    table.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat data.</p>';
+    if (!cachedEntries) table.innerHTML = '<p class="text-sm text-red-400 text-center py-6">Gagal memuat data.</p>';
   });
 }
 
@@ -16303,6 +16314,9 @@ function _renderJagaAdminTableContent_(monday, securityList, entries) {
   html += '</div>';
 
   table.innerHTML = html;
+
+  // Jaga cache per-minggu selalu sinkron dengan yang ditampilkan (optimistic maupun server)
+  try { _jagaAdminDataCache_[_jagaFmtDate_(monday)] = (entries || []).slice(); } catch (_) {}
 }
 
 // Tap sel → cycle: OFF → shift1 → shift2 → ... → OFF
@@ -16373,19 +16387,34 @@ function _jagaAdminCycleCell_(personIdx, tanggal) {
 function _jagaBuildFairRoster_(guards, monday, shifts) {
   var N = guards.length;
   var S = Math.max(1, shifts.length);
-  // Nomor minggu (untuk rotasi shift antar minggu)
-  var weekIdx = Math.floor(monday.getTime() / (7 * 86400000));
+  var pagi  = shifts[0];
+  var malam = shifts[S - 1];
+
+  // Siklus master 5 hari mengikuti roster satpam nyata (pola 4-1):
+  //   [Malam, Malam, OFF, Pagi, Pagi]
+  // - Kerja 4 hari, libur 1 (tiap 5 hari).
+  // - OFF menyela blok malam → pagi = ada istirahat (sehat, tak ada M lalu P mendadak).
+  // - Tiap personil di-offset 1 hari → dalam tim 5 orang, TEPAT 1 orang libur tiap hari.
+  var cycle = (S >= 2)
+    ? [malam, malam, null, pagi, pagi]
+    : [pagi, pagi, pagi, pagi, null]; // 1 shift: tetap 4-1
+  var L = cycle.length;
+
+  // Pakai indeks hari ABSOLUT (hari sejak epoch) supaya pola bersambung mulus
+  // antar minggu — walau tiap generate hanya menyimpan 1 minggu.
+  var epochDay = Math.round(monday.getTime() / 86400000);
+
   var entries = [];
   for (var gi = 0; gi < N; gi++) {
     var g = guards[gi];
-    var baseShift = shifts[(gi + weekIdx) % S];
     for (var d = 0; d < 7; d++) {
-      // Pola 5-1: libur saat (d + gi) habis dibagi 6
-      var isOff = ((d + gi) % 6) === 0;
-      if (isOff) continue;
+      var absDay = epochDay + d;
+      var phase = (((absDay - gi) % L) + L) % L;
+      var sh = cycle[phase];
+      if (!sh) continue; // OFF
       var dt = new Date(monday);
       dt.setDate(dt.getDate() + d);
-      entries.push({ tanggal: _jagaFmtDate_(dt), shift: baseShift, nama: g.nama, noHp: g.noHp || '' });
+      entries.push({ tanggal: _jagaFmtDate_(dt), shift: sh, nama: g.nama, noHp: g.noHp || '' });
     }
   }
   return entries;
