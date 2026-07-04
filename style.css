@@ -2310,6 +2310,18 @@ body.dark .admin-tab-action:hover { background: #1e3a8a; }
     max-height: 88vh;
     overflow-y: auto;
   }
+
+  /* Modal pola "flex-col + spacer atas + kartu rounded-t" (mis. Pilih Form)
+     → center di layar seperti modal Kontak */
+  #formChooserModal { justify-content: center !important; align-items: center !important; }
+  #formChooserModal > .flex-1 { display: none !important; }
+  #formChooserModal > .rounded-t-3xl {
+    max-width: 480px;
+    width: 100%;
+    border-radius: 1.5rem !important;
+    max-height: 88vh;
+    padding-bottom: 8px !important;
+  }
 }
 
 /* ════════════════════════════════════════════════════════════
