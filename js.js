@@ -16176,10 +16176,15 @@ function _renderJagaAdminTable_() {
 
   table.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Memuat...</p>';
 
+  var _sortByNama_ = function(list) {
+    return (list || []).slice().sort(function(a, b) {
+      return String(a.nama || '').localeCompare(String(b.nama || ''), 'id', { sensitivity: 'base' });
+    });
+  };
   var loadSecurity = _jagaAdminSecurityList_
     ? Promise.resolve(_jagaAdminSecurityList_)
     : gasGet_('getSecurityContacts').then(function(res) {
-        _jagaAdminSecurityList_ = (res && res.ok) ? (res.data || []) : [];
+        _jagaAdminSecurityList_ = _sortByNama_((res && res.ok) ? (res.data || []) : []);
         return _jagaAdminSecurityList_;
       });
 
@@ -16237,8 +16242,10 @@ function _renderJagaAdminTableContent_(monday, securityList, entries) {
   }
 
   // Matrix ala roster kertas: baris = personil, kolom = hari, tap sel = ganti shift
+  // Kolom nama di-freeze (sticky left) agar tetap terlihat saat scroll horizontal di mobile
+  var stickyName = 'position:sticky;left:0;z-index:2;background:#fff';
   var html = '<div class="overflow-x-auto"><table class="w-full border-separate" style="border-spacing:4px;min-width:560px">';
-  html += '<thead><tr><th class="text-left text-[11px] font-bold text-gray-400 uppercase px-1">Nama</th>';
+  html += '<thead><tr><th class="text-left text-[11px] font-bold text-gray-400 uppercase px-1" style="' + stickyName + '">Nama</th>';
   days.forEach(function(day) {
     html += '<th class="text-center"><span class="block text-[10px] font-semibold text-gray-400">' + day.label + '</span>' +
             '<span class="block text-xs font-bold text-gray-700">' + day.date + '</span></th>';
@@ -16247,7 +16254,7 @@ function _renderJagaAdminTableContent_(monday, securityList, entries) {
 
   securityList.forEach(function(s, pi) {
     html += '<tr>';
-    html += '<td class="text-sm font-semibold text-gray-800 whitespace-nowrap pr-2">' + _escHtml_(s.nama) + '</td>';
+    html += '<td class="text-sm font-semibold text-gray-800 whitespace-nowrap pr-2" style="' + stickyName + '">' + _escHtml_(s.nama) + '</td>';
     days.forEach(function(day) {
       var entry = byPersonDay[String(s.nama).toLowerCase() + '|' + day.key];
       var shiftIdx = entry ? shifts.indexOf(entry.shift) : -1;
@@ -16341,6 +16348,72 @@ function _jagaAdminCycleCell_(personIdx, tanggal) {
     _jagaCache_ = {}; // invalidate cache halaman warga
   }).catch(function() {
     showToast('Gagal menyimpan — memuat ulang…', 'error');
+    _renderJagaAdminTable_();
+  });
+}
+
+// ===== ADMIN: GENERATOR JADWAL OTOMATIS (adil, pola 5-1) =====
+// Prinsip (referensi rotasi shift satpam 2-shift):
+//  - Setiap personil kerja ~5 hari, libur ~1 hari per siklus 6 hari (5-1).
+//  - Hari libur di-stagger antar personil → tiap hari cakupan tetap terjaga.
+//  - Shift KONSTAN dalam 1 minggu (tak ada Malam→Pagi esok harinya = sehat),
+//    dan dirotasi antar minggu supaya pembagian Pagi/Malam adil jangka panjang.
+function _jagaBuildFairRoster_(guards, monday, shifts) {
+  var N = guards.length;
+  var S = Math.max(1, shifts.length);
+  // Nomor minggu (untuk rotasi shift antar minggu)
+  var weekIdx = Math.floor(monday.getTime() / (7 * 86400000));
+  var entries = [];
+  for (var gi = 0; gi < N; gi++) {
+    var g = guards[gi];
+    var baseShift = shifts[(gi + weekIdx) % S];
+    for (var d = 0; d < 7; d++) {
+      // Pola 5-1: libur saat (d + gi) habis dibagi 6
+      var isOff = ((d + gi) % 6) === 0;
+      if (isOff) continue;
+      var dt = new Date(monday);
+      dt.setDate(dt.getDate() + d);
+      entries.push({ tanggal: _jagaFmtDate_(dt), shift: baseShift, nama: g.nama, noHp: g.noHp || '' });
+    }
+  }
+  return entries;
+}
+
+function _jagaAdminAutoGenerate_() {
+  var guards = _jagaAdminLastSecurityList_ || [];
+  if (!guards.length) { showToast('Belum ada personil security', 'error'); return; }
+  var shifts = (_jagaShiftConfig_ || []).map(function(c) { return c.name; });
+  if (!shifts.length) shifts = ['Pagi', 'Malam'];
+
+  if (!confirm('Buat ulang jadwal minggu ini secara otomatis?\nJadwal manual minggu ini akan ditimpa.')) return;
+
+  var monday = _jagaAdminLastMonday_ || _jagaGetMonday_(new Date());
+  var sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+  var entries = _jagaBuildFairRoster_(guards, monday, shifts);
+
+  // Optimistic: tampilkan langsung
+  _jagaAdminLastEntries_ = entries.map(function(e, i) {
+    return { id: '_tmp_' + i, tanggal: e.tanggal, shift: e.shift, nama: e.nama, noHp: e.noHp };
+  });
+  _renderJagaAdminTableContent_(monday, _jagaAdminLastSecurityList_, _jagaAdminLastEntries_);
+  showToast('Menyimpan jadwal…', 'info');
+
+  gasPost_('adminBulkSetJadwalSecurity', {
+    startDate: _jagaFmtDate_(monday),
+    endDate: _jagaFmtDate_(sunday),
+    entries: entries,
+    adminEmail: (currentUser && currentUser.email) || ''
+  }).then(function(res) {
+    if (!res || !res.ok) {
+      showToast('Gagal membuat jadwal — memuat ulang…', 'error');
+      _renderJagaAdminTable_();
+      return;
+    }
+    _jagaCache_ = {};
+    showToast('Jadwal otomatis dibuat ✓', 'success');
+    _renderJagaAdminTable_(); // sinkron id asli dari server
+  }).catch(function() {
+    showToast('Gagal membuat jadwal — memuat ulang…', 'error');
     _renderJagaAdminTable_();
   });
 }
