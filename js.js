@@ -3741,7 +3741,9 @@ function gasPost_(action, body) {
       return;
     }
     var name = currentUser.fullName || currentUser.name || currentUser.email || '';
-    var role = currentUser.role === 'admin' ? 'Administrator' : 'Warga';
+    var _roleLabels = { admin: 'Administrator', pengurus: 'Pengurus', bendahara: 'Bendahara',
+      koord_security: 'Koord. Security', sekretaris: 'Sekretaris', koord_lapak: 'Koord. Lapak' };
+    var role = _roleLabels[_normRole_(currentUser.role)] || (_hasAdminAccess_() ? 'Pengurus' : 'Warga');
     var initial = name.trim().charAt(0).toUpperCase() || '?';
     var colors = ['#E53935','#8E24AA','#1E88E5','#00ACC1','#2563eb','#FB8C00','#6D4C41','#546E7A','#D81B60','#3949AB'];
     var color = colors[(name.charCodeAt(0) || 0) % colors.length];
@@ -3777,7 +3779,7 @@ function gasPost_(action, body) {
     // Admin button
     var adminBtn = document.getElementById('dskNavAdmin');
     if (adminBtn) {
-      if (currentUser.role === 'admin') adminBtn.classList.remove('hidden');
+      if (_hasAdminAccess_()) adminBtn.classList.remove('hidden');
       else adminBtn.classList.add('hidden');
     }
 
@@ -8121,10 +8123,11 @@ function closeAboutModal() {
 function openExplore() { openAdminPage(); } // legacy alias
 
 function openAdminPage() {
-  if (!currentUser || currentUser.role !== 'admin') return;
+  if (!currentUser || !_hasAdminAccess_()) return;
   switchPage('explorePage');
   setActiveNavById('navAdmin');
   refreshAdminExploreSection();
+  _applyAdminRoleGating_();
   if (!history.state || !history.state.explore) {
     history.pushState({ explore: true }, '');
   }
@@ -8144,11 +8147,10 @@ var _adminWargaBaruCache_ = null;
 // ===== SHOW/HIDE navAdmin BASED ON ROLE =====
 function updateNavAdminVisibility() {
   var btn = document.getElementById('navAdmin');
-  var role = currentUser && currentUser.role ? String(currentUser.role).toLowerCase() : '';
-  var isAdmin = role === 'admin';
+  var show = _hasAdminAccess_();
   if (btn) {
-    btn.classList.toggle('hidden', !isAdmin);
-    btn.classList.toggle('flex', isAdmin);
+    btn.classList.toggle('hidden', !show);
+    btn.classList.toggle('flex', show);
   }
 }
 
@@ -8156,7 +8158,7 @@ function updateNavAdminVisibility() {
 function refreshAdminExploreSection(forceRefresh) {
   var sec = document.getElementById('adminExploreSection');
   if (!sec) return;
-  if (currentUser && currentUser.role === 'admin') {
+  if (currentUser && _hasAdminAccess_()) {
     sec.classList.remove('hidden');
     if (forceRefresh) {
       _infoCRUDCache       = null;
@@ -11080,7 +11082,60 @@ function _initAdminInlineCRUD_() {
   });
 }
 
+// ===== RBAC: peta role → tab admin yang boleh diakses =====
+var _ROLE_TABS_ = {
+  admin:          '*',
+  pengurus:       '*',
+  bendahara:      ['ringkasan', 'kasipl', 'pengeluaran', 'verifikasi', 'rekonsiliasi'],
+  koord_security: ['jadwaljaga'],
+  sekretaris:     ['info', 'greeting', 'menu', 'pengaduan', 'fasum'],
+  koord_lapak:    ['jualanqc']
+};
+function _normRole_(r) {
+  r = String(r || '').toLowerCase().trim().replace(/[\s\-]+/g, '_');
+  var alias = {
+    administrator: 'admin', superadmin: 'admin',
+    keuangan: 'bendahara', treasurer: 'bendahara',
+    security: 'koord_security', satpam: 'koord_security', koordinator_security: 'koord_security', koord_satpam: 'koord_security',
+    humas: 'sekretaris', sekretariat: 'sekretaris', sekretaris_humas: 'sekretaris',
+    lapak: 'koord_lapak', koord_lapak_qc: 'koord_lapak', qc: 'koord_lapak'
+  };
+  return alias[r] || r;
+}
+function _roleAllowedTabs_() {
+  var t = _ROLE_TABS_[_normRole_(currentUser && currentUser.role)];
+  return t === '*' ? '*' : (t || []);
+}
+function _hasAdminAccess_() {
+  var t = _roleAllowedTabs_();
+  return t === '*' || (!!t && t.length > 0);
+}
+function _roleCanTab_(key) {
+  var t = _roleAllowedTabs_();
+  return t === '*' || (t.indexOf(key) !== -1);
+}
+
+// Sembunyikan tab & panel yang tidak diizinkan untuk role saat ini,
+// lalu pastikan tab aktif adalah tab pertama yang boleh diakses.
+function _applyAdminRoleGating_() {
+  var allowed = _roleAllowedTabs_();
+  var firstAllowed = null;
+  document.querySelectorAll('#adminTabNav .admin-tab').forEach(function(b) {
+    var key = b.getAttribute('data-tab');
+    var ok = (allowed === '*') || (allowed.indexOf(key) !== -1);
+    b.classList.toggle('hidden', !ok);
+    if (ok && !firstAllowed) firstAllowed = key;
+  });
+  // Jika tab yang sedang aktif tak diizinkan → pindah ke tab pertama yang boleh
+  if (firstAllowed && !_roleCanTab_(_adminCurrentTab_)) {
+    switchAdminTab(firstAllowed);
+  }
+}
+
 function switchAdminTab(key) {
+  // Guard: role tanpa izin tab ini tidak boleh membukanya
+  if (!_roleCanTab_(key)) return;
+
   // Scorecards ringkasan hanya tampil di tab Ringkasan → tab lain lebih luas
   var scRow = document.getElementById('adminScorecardsRow');
   if (scRow) scRow.classList.toggle('hidden', key !== 'ringkasan');
