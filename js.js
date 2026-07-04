@@ -16158,7 +16158,17 @@ function _jagaAdminNextWeek_() {
   _renderJagaAdminTable_();
 }
 
-function _renderJagaAdminTable_() {
+function _jagaSpinnerHTML_(text) {
+  return '<div class="flex flex-col items-center justify-center gap-2 py-8 text-gray-400">' +
+    '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">' +
+      '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
+      '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>' +
+    '</svg>' +
+    '<p class="text-xs">' + (text || 'Memuat…') + '</p>' +
+  '</div>';
+}
+
+function _renderJagaAdminTable_(silent) {
   var label = document.getElementById('jagaAdminWeekRangeLabel');
   var table = document.getElementById('jagaAdminTable');
   if (!table) return;
@@ -16174,7 +16184,9 @@ function _renderJagaAdminTable_() {
     label.textContent = fmt(monday) + ' - ' + fmt(sunday);
   }
 
-  table.innerHTML = '<p class="text-sm text-gray-400 text-center py-6">Memuat...</p>';
+  // silent = jangan kosongkan tabel (hindari kedip "blank" saat refresh latar);
+  // biarkan tampilan lama sampai data baru siap
+  if (!silent) table.innerHTML = _jagaSpinnerHTML_('Memuat jadwal…');
 
   var _sortByNama_ = function(list) {
     return (list || []).slice().sort(function(a, b) {
@@ -16411,7 +16423,7 @@ function _jagaAdminAutoGenerate_() {
     }
     _jagaCache_ = {};
     showToast('Jadwal otomatis dibuat ✓', 'success');
-    _renderJagaAdminTable_(); // sinkron id asli dari server
+    _renderJagaAdminTable_(true); // sinkron id asli dari server, tanpa kedip (tampilan optimistic tetap terlihat)
   }).catch(function() {
     showToast('Gagal membuat jadwal — memuat ulang…', 'error');
     _renderJagaAdminTable_();
