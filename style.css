@@ -588,6 +588,11 @@ html, body {
     cursor: pointer;
   }
 
+  /* .nav-app punya display:flex → mengalahkan util .hidden (spesifisitas sama).
+     Rule ini bikin class 'hidden' benar-benar menyembunyikan nav button
+     (navLapor & navLogoutBtn di bottom nav, serta toggle navAdmin per-role). */
+  .nav-app.hidden { display: none !important; }
+
   .nav-label { color: inherit; }
 
   /* Bottom nav icon-only, ala IG/Threads */
