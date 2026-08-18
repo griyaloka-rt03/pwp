@@ -5231,11 +5231,20 @@ function gasPost_(action, body) {
     const emailEl = document.getElementById('sayaEmailEditInput');
     const btn     = document.getElementById('sayaSaveBtn');
 
+    // Email opsional — divalidasi format bila diisi (kosong = tak diubah)
+    var _newEmail = emailEl ? emailEl.value.trim() : '';
+    if (_newEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(_newEmail)) {
+      if (typeof showToast === 'function') showToast('Format email tidak valid', 'error');
+      if (emailEl) emailEl.focus();
+      return;
+    }
+
     // Semua blok milik user — ganti No HP/Nama berlaku ke seluruh bloknya
     var _wdBlok = (currentUser && currentUser.wargaData && currentUser.wargaData.length)
       ? currentUser.wargaData.map(function(d){ return d.blok; }).filter(Boolean).join(',') : '';
     const payload = {
       email: currentUser ? currentUser.email : '',
+      newEmail: _newEmail,
       blok: _wdBlok,
       nama: namaEl ? namaEl.value.trim() : '',
       noHp: hpEl ? hpEl.value.trim() : '',
