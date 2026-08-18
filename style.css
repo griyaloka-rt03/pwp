@@ -2484,3 +2484,15 @@ body.dark .bg-gray-200.animate-pulse::after {
 /* Lapak detail: sheet "naik" (ekspand) saat foto di-collapse → ruang deskripsi/diskusi lega */
 #jualanDetailModal > div { transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1); }
 #jualanDetailModal > div.expanded { max-height: 96vh; max-height: 96dvh; }
+
+/* a11y: hormati preferensi kurangi-gerak untuk seluruh app (bukan hanya code-box).
+   Pakai .001ms (bukan 0) agar event transitionend tetap terpicu — JS yg
+   bergantung padanya tak macet. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+}

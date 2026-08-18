@@ -13,7 +13,12 @@ function _handleAuthExpired_() {
   setTimeout(function () { _authExpiredHandling_ = false; }, 4000);
 }
 function _checkAuthResp_(j) {
-  try { if (j && j.error && /unauthorized|login ulang/i.test(String(j.error))) _handleAuthExpired_(); } catch (_) {}
+  try {
+    // Utamakan sinyal eksplisit dari backend; regex teks hanya fallback.
+    var expired = j && (j.authExpired === true || j.code === 401 ||
+      (j.error && /unauthorized|login ulang/i.test(String(j.error))));
+    if (expired) _handleAuthExpired_();
+  } catch (_) {}
   return j;
 }
 
@@ -3077,14 +3082,14 @@ function gasPost_(action, body) {
 
   // View mode dashboard: 'self' (riwayat pribadi) vs admin (verifikasi)
   var _dashAdminView_ = false;
-  function _dashIsAdmin_() { return _dashAdminView_ && currentUser && currentUser.role === 'admin'; }
+  function _dashIsAdmin_() { return _dashAdminView_ && _roleCanTab_('verifikasi'); }
 
   // History menu → selalu tampil pembayaran pribadi (warga view)
   function openHistory() { _dashAdminView_ = false; openDashboard(); }
   // Admin menu → tab Verifikasi (semua pembayaran warga + Confirm/Reject)
   // Buka admin → tab Verifikasi (dipakai bila perlu dari luar)
   function openAdminVerifikasi() {
-    if (!(currentUser && currentUser.role === 'admin')) return;
+    if (!_roleCanTab_('verifikasi')) return;
     if (typeof openAdminPage === 'function') openAdminPage();
     if (typeof switchAdminTab === 'function') switchAdminTab('verifikasi');
   }
@@ -3187,7 +3192,7 @@ function gasPost_(action, body) {
 
   // ADMIN tab "Verifikasi" — tampil inline di panel admin (admin view)
   function _renderVerifikasiInline_() {
-    if (!(currentUser && currentUser.role === 'admin')) return;
+    if (!_roleCanTab_('verifikasi')) return;
     _dashAdminView_ = true;
     activeTabType   = 'pending';
     _resetDashFilters_();
@@ -5876,7 +5881,7 @@ function gasPost_(action, body) {
   }
 
   function confirmPaymentFromUI(rowNumber) {
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!_roleCanTab_('verifikasi')) {
       showToast('Unauthorized','error');
       return;
     }
@@ -5974,7 +5979,7 @@ function gasPost_(action, body) {
   function rejectPayment(rowNumber, adminEmail) {
     let session = getCurrentUserSession(adminEmail);
     if (!session) session = forceRefreshSession_(adminEmail);
-    if (!session || session.role !== 'admin') {
+    if (!session || !_roleCanTab_('verifikasi')) {
       return { success: false, message: 'Unauthorized' };
     }
 
@@ -5993,7 +5998,7 @@ function gasPost_(action, body) {
   }
 
   function rejectPaymentFromUI(rowNumber) {
-    if (!currentUser || currentUser.role !== 'admin') {
+    if (!_roleCanTab_('verifikasi')) {
       showToast('Unauthorized', 'error');
       return;
     }
@@ -7424,7 +7429,7 @@ function formatInfoKonten(text) {
         '<div class="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">' +
           '<span class="text-[10px] font-bold text-primary">' + (i + 1) + '</span>' +
         '</div>' +
-        '<p class="text-sm text-gray-700 leading-relaxed flex-1">' + item + '</p>' +
+        '<p class="text-sm text-gray-700 leading-relaxed flex-1">' + escapeHtml_(item) + '</p>' +
       '</div>';
     });
     html += '</div>';
@@ -7454,12 +7459,12 @@ function formatInfoKonten(text) {
           '<div class="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">' +
             '<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>' +
           '</div>' +
-          '<p class="text-sm text-gray-700 leading-relaxed flex-1">' + bulletMatch[1].trim() + '</p>' +
+          '<p class="text-sm text-gray-700 leading-relaxed flex-1">' + escapeHtml_(bulletMatch[1].trim()) + '</p>' +
         '</div>'
       );
     } else {
       flushList();
-      result.push('<p class="text-sm text-gray-700 leading-relaxed">' + trimmed + '</p>');
+      result.push('<p class="text-sm text-gray-700 leading-relaxed">' + escapeHtml_(trimmed) + '</p>');
     }
   });
 
@@ -12338,7 +12343,7 @@ var _jualanUploading_ = 0;
 
 function _jualanThumb_(id, w){ return 'https://drive.google.com/thumbnail?id=' + id + '&sz=w' + (w||800); }
 function _jualanRp_(n){ n = Number(n||0); return n>0 ? ('Rp ' + n.toLocaleString('id-ID')) : 'Nego'; }
-function _jualanIsAdmin_(){ return currentUser && currentUser.role === 'admin'; }
+function _jualanIsAdmin_(){ return _roleCanTab_('jualanqc'); }
 function _jualanMyEmail_(){ return currentUser && currentUser.email ? currentUser.email.toLowerCase() : ''; }
 
 function openJualanPage(){
@@ -13136,7 +13141,7 @@ function _renderLaporPage_() {
   var newBtn     = document.getElementById('laporNewBtn');
 
   // Show/hide admin tab
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
   if (tabAll) tabAll.classList.toggle('hidden', !isAdmin);
 
   if (loginReq) loginReq.classList.add('hidden');
@@ -13201,7 +13206,7 @@ function _renderLaporPage_() {
 function _renderLaporList_(data) {
   var list = document.getElementById('laporList');
   if (!list) return;
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
 
   var statusConfig = {
     'Masuk'    : { cls: 'lapor-badge-masuk',    emoji: '🔴', label: 'Masuk' },
@@ -13348,7 +13353,7 @@ function _openLaporDetail_(idx) {
   var body  = document.getElementById('laporDetailBody');
   if (!modal || !body) return;
 
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
   var statusOptions = ['Masuk','Diproses','Selesai','Ditolak'];
 
   body.innerHTML = ''
@@ -13549,7 +13554,7 @@ function _renderSuratPengantarPage_() {
   var list       = document.getElementById('suratList');
   var tabAll     = document.getElementById('suratTabAll');
 
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
   if (tabAll) tabAll.classList.toggle('hidden', !isAdmin);
 
   if (emptyState) emptyState.classList.add('hidden');
@@ -13609,7 +13614,7 @@ function _renderSuratPengantarPage_() {
 function _renderSuratPengantarList_(data) {
   var list = document.getElementById('suratList');
   if (!list) return;
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
 
   var statusConfig = {
     'Diajukan'  : { cls: 'surat-badge-diajukan',  label: 'Diajukan' },
@@ -13671,7 +13676,7 @@ function _orgPickSign_(input) {
   reader.readAsDataURL(file);
 }
 
-function _orgRole_() { return (currentUser && currentUser.role) ? String(currentUser.role).toLowerCase() : ''; }
+function _orgRole_() { return _normRole_(currentUser && currentUser.role); }
 function _orgToggle_(id, show) { var el = document.getElementById(id); if (el) el.classList.toggle('hidden', !show); }
 
 function openOrgSettings() {
@@ -13778,7 +13783,7 @@ function _openSuratDetail_(idx) {
   var body  = document.getElementById('suratDetailBody');
   if (!modal || !body) return;
 
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
   var statusOptions = ['Diajukan','Diproses','Disetujui','Ditolak'];
   var statusConfig = {
     'Diajukan'  : { cls: 'surat-badge-diajukan',  label: 'Diajukan' },
@@ -13901,7 +13906,7 @@ function _renderVotingPage_() {
   var list       = document.getElementById('votingList');
   var newBtn     = document.getElementById('pollNewBtn');
 
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
   if (newBtn) newBtn.classList.toggle('hidden', !isAdmin);
   if (newBtn) newBtn.classList.toggle('flex', isAdmin);
   if (emptyState) emptyState.classList.add('hidden');
@@ -14063,7 +14068,7 @@ function _pollResultsChartHtml_(options, total) {
 
 function _renderPollDetail_(p) {
   var body = document.getElementById('pollDetailBody');
-  var isAdmin = currentUser && currentUser.role === 'admin';
+  var isAdmin = _jualanIsAdmin_();
   var statusBadge = p.status === 'Aktif'
     ? '<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 flex-shrink-0">Aktif</span>'
     : '<span class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-500 flex-shrink-0">Selesai</span>';
@@ -17440,7 +17445,7 @@ function reconOnFile(ev) {
 }
 
 function reconRunMatch() {
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!_roleCanTab_('rekonsiliasi')) {
     if (typeof showToast === 'function') showToast('Khusus admin', 'error');
     return;
   }
@@ -17623,7 +17628,7 @@ function reconRender_(res) {
 }
 
 function reconConfirm(rowNumber, btn) {
-  if (!currentUser || currentUser.role !== 'admin') return;
+  if (!_roleCanTab_('rekonsiliasi')) return;
   if (btn) {
     btn.disabled = true;
     if (btn.parentElement) Array.prototype.forEach.call(btn.parentElement.querySelectorAll('button'), function (b) { b.disabled = true; });
@@ -17655,7 +17660,7 @@ function reconResetBtns_(btn, label) {
 }
 
 function reconReject(rowNumber, btn) {
-  if (!currentUser || currentUser.role !== 'admin') return;
+  if (!_roleCanTab_('rekonsiliasi')) return;
   if (btn) {
     btn.disabled = true;
     if (btn.parentElement) Array.prototype.forEach.call(btn.parentElement.querySelectorAll('button'), function (b) { b.disabled = true; });
@@ -17697,7 +17702,7 @@ function reconOpenBukti_(url) {
 function reconRemindWAByIdx_(i, btn) {
   var it = (window._reconPNS || [])[i];
   if (!it) return;
-  if (!currentUser || currentUser.role !== 'admin') { if (typeof showToast === 'function') showToast('Khusus admin', 'error'); return; }
+  if (!_roleCanTab_('rekonsiliasi')) { if (typeof showToast === 'function') showToast('Khusus admin', 'error'); return; }
   if (!it.warga.noHp) { if (typeof showToast === 'function') showToast('No HP warga kosong', 'error'); return; }
   reconBtnSpin_(btn);
   var periodeTxt = it.mutasi.periode != null ? (RECON_BULAN[it.mutasi.periode] + ' ' + it.mutasi.tahun) : '';
@@ -17722,7 +17727,7 @@ function reconRemindWAByIdx_(i, btn) {
 function reconConfirmUnsubByIdx_(i, btn) {
   var it = (window._reconPNS || [])[i];
   if (!it) return;
-  if (!currentUser || currentUser.role !== 'admin') { if (typeof showToast === 'function') showToast('Khusus admin', 'error'); return; }
+  if (!_roleCanTab_('rekonsiliasi')) { if (typeof showToast === 'function') showToast('Khusus admin', 'error'); return; }
   if (it.mutasi.periode == null) { if (typeof showToast === 'function') showToast('Periode tak terdeteksi, gunakan Reminder WA', 'error'); return; }
   reconBtnSpin_(btn);
   gasPost_('reconConfirmUnsubmitted', {
@@ -17764,3 +17769,13 @@ document.addEventListener('click', function (e) {
 
 /* Tampilkan email hanya bila email asli (ada '@'); identitas kanonik No HP → kosong */
 function _emailOrBlank_(e) { e = String(e || ''); return e.indexOf('@') !== -1 ? e : ''; }
+
+// a11y: tandai semua kontainer modal/sheet dengan semantik dialog (screen reader).
+// ponytail: tag semantik saja — Esc/focus-trap ditahan karena tiap modal punya
+// cleanup close sendiri (revoke objectURL, reset state) yang tak boleh di-bypass.
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[id$="Modal"],[id$="Sheet"],[id$="Picker"],[id$="Chooser"]').forEach(function (m) {
+    if (!m.getAttribute('role')) m.setAttribute('role', 'dialog');
+    m.setAttribute('aria-modal', 'true');
+  });
+});

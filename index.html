@@ -2,16 +2,18 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"  content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="viewport"  content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>PWP — Portal Warga Pintar</title>
 
   <!-- Inter — closest to Grab/Gojek feel, industry standard fintech font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Tailwind: CSS statis pra-build (gantikan cdn.tailwindcss.com runtime JIT).
+       Regenerate: npx tailwindcss@3 -c tailwind.config.js -i tw-src.css -o tailwind.css --minify -->
+  <link rel="stylesheet" href="/tailwind.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 
   <!-- OneSignal Web Push SDK -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
@@ -26,22 +28,6 @@
         promptOptions: { slidedown: { enabled: false } }
       });
     });
-  </script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            primary: '#2563eb',
-            darkbg: '#0B1220',
-            softbg: '#F7F9F7',
-          },
-          fontFamily: {
-            sans: ['"Inter"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-          },
-        },
-      },
-    };
   </script>
 
 <link rel="stylesheet" href="/style.css">
