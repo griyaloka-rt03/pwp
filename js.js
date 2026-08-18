@@ -300,7 +300,10 @@ function gasPost_(action, body) {
           '<span class="greet-icon" style="display:inline-block;animation:greetIconIn .6s cubic-bezier(0.34,1.56,0.64,1) both;">' +
             (_icons[_label] || '') +
           '</span>' +
-          (_label.charAt(0).toUpperCase() + _label.slice(1)) + ', ' + _fullName;
+          '<span style="font-size:12px;font-weight:500;opacity:0.7">' +
+            (_label.charAt(0).toUpperCase() + _label.slice(1)) + ', ' +
+          '</span>' +
+          escapeHtml_(_fullName);
         greetEl.classList.remove('hidden');
         greetEl.classList.add('flex');
       }
