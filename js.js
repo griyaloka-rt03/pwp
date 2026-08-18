@@ -297,13 +297,15 @@ function gasPost_(action, body) {
         var _fullName = (currentUser.fullName || currentUser.email || '');
         // Icon waktu + animasi masuk halus (naik + fade sekali, lalu diam)
         greetTxt.innerHTML =
-          '<span class="greet-icon" style="display:inline-block;animation:greetIconIn .6s cubic-bezier(0.34,1.56,0.64,1) both;">' +
-            (_icons[_label] || '') +
+          '<span style="display:block;font-size:11px;font-weight:500;opacity:0.65;line-height:1.25">' +
+            '<span class="greet-icon" style="display:inline-block;animation:greetIconIn .6s cubic-bezier(0.34,1.56,0.64,1) both;">' +
+              (_icons[_label] || '') +
+            '</span>' +
+            (_label.charAt(0).toUpperCase() + _label.slice(1)) +
           '</span>' +
-          '<span style="font-size:12px;font-weight:500;opacity:0.7">' +
-            (_label.charAt(0).toUpperCase() + _label.slice(1)) + ', ' +
-          '</span>' +
-          escapeHtml_(_fullName);
+          '<span style="display:block;font-size:16px;font-weight:700;line-height:1.2" class="truncate">' +
+            escapeHtml_(_fullName) +
+          '</span>';
         greetEl.classList.remove('hidden');
         greetEl.classList.add('flex');
       }
