@@ -6859,6 +6859,18 @@ function loadHomeTunggakan() {
           if (!paidNow.includes(mi)) { nextUnpaidMonth = mi; break; }
         }
         var hasUpcoming = res.upcoming > 0 && nextUnpaidMonth >= 0;
+        // Warga sudah lunas → tetap Rp 0 sampai tagihan periode berjalan benar2
+        // mulai, yaitu tgl 1 bulan jatuh tempo (mis. due 10 Okt → mulai 1 Okt).
+        // Sebelum itu jangan tampilkan nominal upcoming biar warga tak mengira
+        // masih ada tagihan. ponytail: display-only, backend tetap kirim upcoming.
+        if (hasUpcoming && res.dueDate) {
+          var _billStart = new Date(res.dueDate);
+          _billStart.setDate(1);
+          _billStart.setHours(0, 0, 0, 0);
+          var _todayBS = new Date();
+          _todayBS.setHours(0, 0, 0, 0);
+          if (_todayBS < _billStart) hasUpcoming = false;
+        }
         if (hasUpcoming) {
           nomEl.innerText = 'Rp ' + Number(res.upcoming).toLocaleString('id-ID');
         } else {
